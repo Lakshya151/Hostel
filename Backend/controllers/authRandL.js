@@ -1,14 +1,18 @@
 const Student = require('../models/Student');
 const Room=require('../models/Room');
 const Mess=require('../models/Mess');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const User=require('../models/User');
 const Complaint = require('../models/Complaint');
+const validateAdmin=require('../middlewares/validateAdmin');
+const validateStudent=require('../middlewares/validateStudent');
 
 
 //register admin
 const registerAdmin=async (req,res)=>{
     try{
-        validate(req.body);
+        validateAdmin(req.body);
         const {username,email,password,phoneNumber,aadhar}=req.body;
 
          const isExist = await User.findOne({
@@ -24,6 +28,7 @@ const registerAdmin=async (req,res)=>{
         const user=await User.create({
             username,
             email:email.trim().toLowerCase(),
+            phoneNumber,
             password:hashedPassword,
             aadhar,
             role:"admin"
@@ -113,7 +118,7 @@ const loginAdmin = async (req, res) => {
 //register new Student
 const registerStudent=async(req,res)=>{
     try{
-        Validate(req.body);
+        validateStudent(req.body);
         const {username,email,password,phoneNumber,aadhar,
             roomNo,course,year,guardianName,
             guardianPhone,feeDue}=req.body;
@@ -141,8 +146,8 @@ const registerStudent=async(req,res)=>{
         }
 
 
-        const newUser=await create.User({username,email,password:hashedPassword,phoneNumber,aadhar,role:"student"});
-        const newStudent=await create.Student({roomNo,course,year,guardianName,guardianPhone,feeDue});
+        const newUser=await User.create({username,email,password:hashedPassword,phoneNumber,aadhar,role:"student"});
+        const newStudent=await Student.create({userId:newUser._id,roomNo,course,year,guardianName,guardianPhone,feeDue});
 
         room.student.push(newUser._id);
         await room.save();
@@ -185,7 +190,7 @@ const loginStudent=async (req,res)=>{
             _id:user._id,
             username:user.username,
             phoneNumber:user.phoneNumber,
-            email:user.username,
+            email:user.email,
             role:user.role
         },process.env.JWT_KEY)
         res.cookie('token',token,{httpOnly: true});
@@ -243,6 +248,7 @@ const searchStudent=async (req,res)=>{
 const isSpace=async (req,res)=>{
     try{
         const {roomNo}=req.params;
+        if(!roomNo)throw new Error("room number not passed!")
         const room=await Room.findOne({roomNo});
         if(!room){
             return res.status(404).json({
@@ -279,6 +285,7 @@ const isSpace=async (req,res)=>{
 const menu=async (req,res)=>{
     try{
         const {day,breakfast,lunch,snacks,dinner,type}=req.body;
+        if(!day ||!breakfast|| !lunch || !snacks || !dinner || !type)throw new Error("Some fields are missing!");
         const alreadyExist=await Mess.findOne({day,type});
         if(alreadyExist){
             return res.status(400).json({
@@ -302,7 +309,7 @@ const menu=async (req,res)=>{
 const getMenu=async (req,res)=>{
     try{
         const menu=(await Mess.find()).sort({createdAt:-1});
-        if(!menu){
+        if(menu.length===0){
             return res.status(400).json({
                 message:"menu will be available soon!"
             })
@@ -319,7 +326,7 @@ const getMenu=async (req,res)=>{
 //get menu by day
 const getMenuByDay=async (req,res)=>{
     try{
-        const day=req.params;
+        const {day}=req.params;
         if(!day){
             return res.status(500).json({
                 message:"Please enter day!"
@@ -327,7 +334,7 @@ const getMenuByDay=async (req,res)=>{
         }
 
         const menu=await Mess.findOne({day});
-        if(!menu.length){
+        if(!menu){
             return res.status(500).json({
                 message:"menu for this day is not available!"
             })
@@ -338,7 +345,7 @@ const getMenuByDay=async (req,res)=>{
         });
     }catch(err){
         res.status(500).json({
-            message:errr.message
+            message:err.message
         })
     }
 }
@@ -348,7 +355,7 @@ const updateMessMenu = async (req, res) => {
     try {
 
         const { day } = req.params;
-
+        if(!day)throw new Error("please fill the day!");
         const updatedMenu = await Mess.findOneAndUpdate(
             { day },        // find by day
             req.body,       // updated data
@@ -384,7 +391,7 @@ const deleteMenu=async (req,res)=>{
             })
         }
 
-        const menu=await Menu.findOneandDelete({day});
+        const menu=await Menu.findOneAndDelete({day});
 
         if(!menu){
             return res.status(500).json({
@@ -407,15 +414,16 @@ const deleteMenu=async (req,res)=>{
 const fileComplaint=async (req,res)=>{
     try{
         const{roomNo,title,description}=req.body;
+
+        if(!roomNo ||!title){
+            return res.status(400).json({
+                message:"credentials missing!"
+            })
+        }
         const isExist=await Complaint.findOne({roomNo,title});
         if(isExist){
             return res.status(200).json({
                 message:"complaint already exists !"
-            })
-        }
-        if(!roomNo ||!title){
-            return res.status(400).json({
-                message:"credentials missing!"
             })
         }
 
@@ -441,7 +449,7 @@ const fileComplaint=async (req,res)=>{
 //delete complaint
 const deleteComplaint=async (req,res)=>{
     try{
-        const {roomNo}=req.params;
+        const {roomNo}=req.result;
         if(!roomNo){
             return res.status(400).json({
                 message:"credentials missing!"
@@ -469,7 +477,7 @@ const deleteComplaint=async (req,res)=>{
 //resolve complaint
 const resolveComplaint=async (req,res)=>{
     try{
-        const {roomNo}=req.params;
+        const {roomNo}=req.result;
         if(!roomNo){
             return res.status(400).json({
                 message:"RoomNo doesn't exist!"
@@ -538,4 +546,11 @@ const viewRoomComplaint=async (req,res)=>{
             message:err.message
         })
     }
+}
+const profile=async (req,res)=>{
+    
+}
+module.exports={registerAdmin,registerStudent,loginAdmin,loginStudent,searchStudent,
+    isSpace,menu,getMenu,getMenuByDay,updateMessMenu,deleteMenu,fileComplaint,deleteComplaint,
+    resolveComplaint,viewComplaint,viewRoomComplaint
 }
