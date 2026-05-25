@@ -21,6 +21,11 @@ const userSchema=new Schema({
         required:true,
         trim:true
     },
+    phoneNumber:{
+        type:String,
+        required:true,
+        trim:true
+    },
     role:{
         type:String,
         enum:['admin','student'],
@@ -29,6 +34,13 @@ const userSchema=new Schema({
     profilePic:{
         type:String,
         default:""
+    },
+    aadhar:{
+        type:String,
+        required:true,
+        trim:true,
+        min:12,
+        max:12
     }
 })
 

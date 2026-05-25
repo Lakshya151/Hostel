@@ -2,31 +2,32 @@ const mongoose=require('mongoose');
 const {Schema}=mongoose;
 
 const feeSchema=new Schema({
+
     studentId:{
         type:mongoose.Schema.Types.ObjectId,
-        ref:"Student",
-        required:true
+        ref:'Student'
     },
     amount:{
+        type:Number,
+        required:true
+    },
+    feeType:{
         type:String,
-        required:true,
-        trim:true
+        enum:[
+            'hostel',
+            'mess',
+            'bus'
+        ]
     },
     dueDate:{
-        type:Date,
-        required:true,
-        trim:true
+        type:Date
     },
     status:{
         type:String,
         enum:['paid','unpaid'],
-        required:true,
-        trim:true
-    },
-    paymentId:{
-        type:String,
-        trim:true
+        default:'unpaid'
     }
+
 },{timestamps:true});
 
 module.exports=mongoose.model('Fee',feeSchema);

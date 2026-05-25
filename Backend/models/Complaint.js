@@ -1,24 +1,17 @@
-{
-  studentId,
-  title,
-  description,
-  status
-}
 const mongoose=require('mongoose');
 const {Schema}= mongoose;
 
 const complaintSchema=new Schema({
     userId:{
         type:mongoose.Schema.Types.ObjectId,
-        ref:"User",
-        required:true
+        ref:"User"
     },
     roomNo:{
         type:mongoose.Schema.Types.ObjectId,
         ref:"Student",
         required:true,
     },
-    Title:{
+    title:{
         type:String,
         required:true,
         trim:true,
@@ -33,7 +26,8 @@ const complaintSchema=new Schema({
     },
     status:{
         type:String,
-        enum:['resolve','pending']
+        enum:['resolve','pending'],
+        default:'pending'
     }
 },{timestamps:true})
 
