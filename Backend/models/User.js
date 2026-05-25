@@ -29,7 +29,7 @@ const userSchema=new Schema({
     role:{
         type:String,
         enum:['admin','student'],
-        default:student
+        default:"student"
     },
     profilePic:{
         type:String,

@@ -31,4 +31,4 @@ const complaintSchema=new Schema({
     }
 },{timestamps:true})
 
-module.exports=mongoose.model('Complaint',complainSchematSchema);
+module.exports=mongoose.model('Complaint',complaintSchema);
