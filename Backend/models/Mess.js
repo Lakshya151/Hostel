@@ -18,24 +18,24 @@ const messSchema = new Schema({
     },
 
     breakfast: {
-        type: String,
+        type: [String],
         required: true,
         trim: true
     },
 
     lunch: {
-        type: String,
+        type: [String],
         required: true,
         trim: true
     },
 
     snacks: {
-        type: String,
+        type: [String],
         trim: true
     },
 
     dinner: {
-        type: String,
+        type: [String],
         required: true,
         trim: true
     },
