@@ -7,26 +7,26 @@ const complaintSchema=new Schema({
         ref:"User"
     },
     roomNo:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:"Student",
+        type:String,
         required:true,
+        trim:true
     },
     title:{
         type:String,
         required:true,
         trim:true,
-        min:2,
-        max:20
+        minlength:2,
+        maxlength:20
     },
     description:{
         type:String,
         trim:true,
-        min:2,
-        max:70
+        minlength:2,
+        maxlength:70
     },
     status:{
         type:String,
-        enum:['resolve','pending'],
+        enum:['resolve','pending','in-progress'],
         default:'pending'
     }
 },{timestamps:true})

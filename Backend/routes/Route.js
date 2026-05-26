@@ -1,8 +1,9 @@
 const express=require('express');
 const adminMiddleware=require('../middlewares/adminMiddleware');
 const studentMiddleware=require('../middlewares/studentMiddleware');
+const redisClient=require('../config/redis');
 const {registerAdmin,registerStudent,loginAdmin,loginStudent, searchStudent,
-     isSpace, menu,
+     isSpace, createMenu,
      getMenu,
      getMenuByDay,
      updateMessMenu,
@@ -10,7 +11,7 @@ const {registerAdmin,registerStudent,loginAdmin,loginStudent, searchStudent,
      fileComplaint,
      deleteComplaint,
      resolveComplaint,
-     viewComplaint,
+     viewComplaint,logout,
      viewRoomComplaint}=require('../controllers/authRandL');
 const validateStudent = require('../middlewares/validateStudent');
 
@@ -25,12 +26,14 @@ router.post('/registerStudent',adminMiddleware,registerStudent);
 router.post('/loginAdmin',loginAdmin);
 //login student
 router.post('/loginStudent',loginStudent);
+//logout
+router.post('/logout',logout);
 //search student
 router.get('/searchStudent',adminMiddleware,searchStudent);
 //check if room has space
 router.post('/isSpace',adminMiddleware,isSpace);
 //create menu
-router.post('/menu',adminMiddleware,menu);
+router.post('/createMenu',adminMiddleware,createMenu);
 //get menu
 router.get('/getMenu',getMenu);
 //get menu by day

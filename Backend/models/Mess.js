@@ -31,7 +31,8 @@ const messSchema = new Schema({
 
     snacks: {
         type: [String],
-        trim: true
+        trim: true,
+        required:true
     },
 
     dinner: {
