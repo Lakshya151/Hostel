@@ -3,6 +3,7 @@ const Room=require('../models/Room');
 const Mess=require('../models/Mess');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const redisClient=require('../config/redis');
 const User=require('../models/User');
 const Complaint = require('../models/Complaint');
 const validateAdmin=require('../middlewares/validateAdmin');
@@ -13,10 +14,10 @@ const validateStudent=require('../middlewares/validateStudent');
 const registerAdmin=async (req,res)=>{
     try{
         validateAdmin(req.body);
-        const {username,email,password,phoneNumber,aadhar}=req.body;
-
+        const {username,email,password,phoneNumber,aadhar,profilePic}=req.body;
+        const normalizedEmail=email.trim().toLowerCase();
          const isExist = await User.findOne({
-            email: email.trim().toLowerCase()
+            email:normalizedEmail
         });
 
         if (isExist) {
@@ -24,20 +25,31 @@ const registerAdmin=async (req,res)=>{
                 message: "Admin already exists!"
             });
         }
+        if(profilePic && !validator.isURL(profilePic)){
+            throw new Error("Invalid profile picture URL");
+        }
         const hashedPassword=await bcrypt.hash(password,10);
         const user=await User.create({
             username,
-            email:email.trim().toLowerCase(),
+            email:normalizedEmail,
             phoneNumber,
             password:hashedPassword,
             aadhar,
+            profilePic,
             role:"admin"
         });
-        const token=jwt.sign({_id:user._id,email:user.email,role:user.role},process.env.JWT_KEY); 
+        const token=jwt.sign({_id:user._id,role:user.role},process.env.JWT_KEY); 
         const userToken=res.cookie('token',token,{httpOnly:true});//maxAge is expiry time
         res.status(201).json({
             message:"User Registered Successfully",
-            user
+            user: {
+                _id: user._id,
+                username: user.username,
+                email: user.email,
+                role: user.role,
+                phoneNumber: user.phoneNumber,
+                profilePic: user.profilePic
+            }
         });
     }catch(err){
         res.status(500).json({
@@ -83,21 +95,20 @@ const loginAdmin = async (req, res) => {
 
         if (!isMatch) {
             return res.status(400).json({
-                message: "Wrong password!"
+                message: "Invalid credentials"
             });
         }
 
         // generate token
         const token = jwt.sign({
             _id: user._id,
-            username: user.username,
-            email: user.email,
-            role: user.role
+            role: user.role,
         }, process.env.JWT_KEY);
         res.cookie('token', token, {
-            httpOnly: true
+            httpOnly: true,
+            secure:true,
+            sameSite:"strict"
         });
-
         res.status(200).json({
             message: "Admin login successful",
             admin: {
@@ -105,7 +116,8 @@ const loginAdmin = async (req, res) => {
                 username: user.username,
                 email: user.email,
                 role: user.role,
-                phoneNumber: user.phoneNumber
+                phoneNumber: user.phoneNumber,
+                profilePic:user.profilePic
             }
 
         });
@@ -121,10 +133,13 @@ const registerStudent=async(req,res)=>{
         validateStudent(req.body);
         const {username,email,password,phoneNumber,aadhar,
             roomNo,course,year,guardianName,
-            guardianPhone,feeDue}=req.body;
-        const hashedPassword=await bcrypt.hash(password,10);
-        const isRegister=await User.findOne({email});
+            guardianPhone,feeDue,profilePic}=req.body;
 
+        const normalizedEmail = email.trim().toLowerCase();
+        const isRegister=await User.findOne({email:normalizedEmail});
+        if(profilePic && !validator.isURL(profilePic)){
+            throw new Error("Invalid profile picture URL");
+        }
         if(isRegister){
             return res.status(200).json({
                 message:"Student already register!"
@@ -144,21 +159,28 @@ const registerStudent=async(req,res)=>{
                 message: "Room is already full!"
             });
         }
+        const hashedPassword=await bcrypt.hash(password,10);
 
-
-        const newUser=await User.create({username,email,password:hashedPassword,phoneNumber,aadhar,role:"student"});
+        const newUser=await User.create({username,email:normalizedEmail,password:hashedPassword,phoneNumber,aadhar,role:"student",profilePic});
         const newStudent=await Student.create({userId:newUser._id,roomNo,course,year,guardianName,guardianPhone,feeDue});
 
         room.student.push(newUser._id);
         await room.save();
 
         
-        const token =jwt.sign({_id:newUser._id,username:username,email:email,phoneNumber:phoneNumber,role:"student"},process.env.JWT_KEY);
-        const userToken=res.cookie('token',token,{httpOnly: true});
+        const token =jwt.sign({_id:newUser._id,role:newUser.role},process.env.JWT_KEY);
+        res.cookie('token',token,{httpOnly: true});
 
-        res.status(200).json({
+        res.status(201).json({
             message:"Register Successfull!",
-            User:newUser,
+            user: {
+                _id: newUser._id,
+                username: newUser.username,
+                email:normalizedEmail,
+                role: newUser.role,
+                phoneNumber: newUser.phoneNumber,
+                profilePic
+            },
             Student:newStudent,
             occupiedStudent: room.student.length,
             availableSeat: room.capacity - room.student.length
@@ -179,18 +201,19 @@ const loginStudent=async (req,res)=>{
         if(!user)throw new Error("user not found!");
         const ismatch=await bcrypt.compare(password,user.password);
         if(!ismatch)throw new Error("wrong password!");
+        if(user.role !== "student"){
+            throw new Error("Access denied!");
+        }
         const reply={
             _id:user._id,
             username:user.username,
             email:user.email,
             role:user.role,
-            phoneNumber:user.phoneNumber
+            phoneNumber:user.phoneNumber,
+            profilePic:user.profilePic
         }
         const token=jwt.sign({
             _id:user._id,
-            username:user.username,
-            phoneNumber:user.phoneNumber,
-            email:user.email,
             role:user.role
         },process.env.JWT_KEY)
         res.cookie('token',token,{httpOnly: true});
@@ -202,6 +225,26 @@ const loginStudent=async (req,res)=>{
         res.status(500).json({
             message:err.message
         })
+    }
+}
+//logout
+const logout=async(req,res)=>{
+    try{
+        const {token}=req.cookies;
+        const payload = jwt.verify(
+            token,
+            process.env.JWT_KEY
+        );
+        await redisClient.set(`token:${token}`,'Blocked');
+         res.clearCookie("token");
+        res.status(200).json({
+            message:"Logout Successfull",
+            role:payload.role
+        })
+    }catch(err){
+        res.status(500).json({
+            message: err.message
+        });
     }
 }
 //search Student
@@ -226,7 +269,7 @@ const searchStudent=async (req,res)=>{
             users.map(async(user)=>{
                 const student=await Student.findOne({
                     userId:user._id
-                }).select('roomNo capacity ')
+                }).select('roomNo')
                 return {
                     _id:user._id,
                     username:user.username,
@@ -237,7 +280,7 @@ const searchStudent=async (req,res)=>{
             })
         )
 
-        res.status(200).json({finalUser});
+        res.status(200).json({user:finalUser});
     }catch(err){
         res.status(500).json({
             message:err.message
@@ -248,7 +291,11 @@ const searchStudent=async (req,res)=>{
 const isSpace=async (req,res)=>{
     try{
         const {roomNo}=req.params;
-        if(!roomNo)throw new Error("room number not passed!")
+        if (!roomNo || roomNo.trim() === "") {
+            return res.status(400).json({
+                message: "Room number is required!"
+            });
+        }
         const room=await Room.findOne({roomNo});
         if(!room){
             return res.status(404).json({
@@ -263,8 +310,8 @@ const isSpace=async (req,res)=>{
                 capacity:room.capacity,
                 occupiedStudent:occupied,
                 availableSeat,
-                isavailable:true,
-                message:"Room avalibale !"
+                isAvailable:true,
+                message:"Room available!"
             })
         }
         return res.status(400).json({
@@ -272,7 +319,7 @@ const isSpace=async (req,res)=>{
                 capacity:room.capacity,
                 occupiedStudent:occupied,
                 availableSeat:0,
-                isavailable:false,
+                isAvailable:false,
                 message:"This room is already full"
         })
     }catch(err){
@@ -282,7 +329,7 @@ const isSpace=async (req,res)=>{
     }
 }
 //set menu
-const menu=async (req,res)=>{
+const createMenu=async (req,res)=>{
     try{
         const {day,breakfast,lunch,snacks,dinner,type}=req.body;
         if(!day ||!breakfast|| !lunch || !snacks || !dinner || !type)throw new Error("Some fields are missing!");
@@ -308,9 +355,9 @@ const menu=async (req,res)=>{
 //get all menu
 const getMenu=async (req,res)=>{
     try{
-        const menu=(await Mess.find()).sort({createdAt:-1});
+        const menu=await Mess.find().sort({createdAt:-1});
         if(menu.length===0){
-            return res.status(400).json({
+            return res.status(404).json({
                 message:"menu will be available soon!"
             })
         }
@@ -328,14 +375,14 @@ const getMenuByDay=async (req,res)=>{
     try{
         const {day}=req.params;
         if(!day){
-            return res.status(500).json({
+            return res.status(400).json({
                 message:"Please enter day!"
             })
         }
 
-        const menu=await Mess.findOne({day});
+        const menu=await Mess.find({day});
         if(!menu){
-            return res.status(500).json({
+            return res.status(404).json({
                 message:"menu for this day is not available!"
             })
         }
@@ -354,10 +401,14 @@ const updateMessMenu = async (req, res) => {
 
     try {
 
-        const { day } = req.params;
-        if(!day)throw new Error("please fill the day!");
+        const {day,type} = req.params;
+        if(!day||!type){
+            return res.status(400).json({
+                message:"Please provide day and type!"
+            })
+        }
         const updatedMenu = await Mess.findOneAndUpdate(
-            { day },        // find by day
+            {day,type},        // find by day
             req.body,       // updated data
             { new: true }   // return updated document
         );
@@ -386,15 +437,15 @@ const deleteMenu=async (req,res)=>{
     try{
         const {day}=req.params;
         if(!day){
-            return res.status(500).json({
+            return res.status(400).json({
                 message:"Please enter day"
             })
         }
 
-        const menu=await Menu.findOneAndDelete({day});
+        const menu=await Mess.findOneAndDelete({day});
 
         if(!menu){
-            return res.status(500).json({
+            return res.status(404).json({
                 message:"Menu not found for this day!"
             })
         }
@@ -420,12 +471,6 @@ const fileComplaint=async (req,res)=>{
                 message:"credentials missing!"
             })
         }
-        const isExist=await Complaint.findOne({roomNo,title});
-        if(isExist){
-            return res.status(200).json({
-                message:"complaint already exists !"
-            })
-        }
 
         const room = await Room.findOne({ roomNo });
 
@@ -435,7 +480,14 @@ const fileComplaint=async (req,res)=>{
             });
         }
 
-        const complaint=await Complaint.create({roomNo,title,description});
+        const isExist=await Complaint.findOne({roomNo,title,status:"pending"});
+        if(isExist){
+            return res.status(200).json({
+                message:"complaint already exists !"
+            })
+        }
+
+        const complaint=await Complaint.create({roomNo,title,description,userId: req.result._id});
         res.status(201).json({
             complaint,
             message:"complaint file successfully!"
@@ -446,17 +498,51 @@ const fileComplaint=async (req,res)=>{
         })
     }
 }
+//get my complaint
+const myComplaints = async (req, res) => {
+
+    try {
+
+        const userId = req.result._id;
+
+        const complaints =
+            await Complaint.find({
+                userId
+            }).sort({ createdAt: -1 });
+
+        if (complaints.length === 0) {
+
+            return res.status(404).json({
+                message:
+                    "No complaints found!"
+            });
+
+        }
+
+        res.status(200).json({
+            complaints
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+            message: err.message
+        });
+
+    }
+};
 //delete complaint
 const deleteComplaint=async (req,res)=>{
     try{
-        const {roomNo}=req.result;
-        if(!roomNo){
+        const userId=req.result._id;
+        const {_id}=req.params;
+        if(!_id){
             return res.status(400).json({
-                message:"credentials missing!"
+                message:"complaint Id is missing !"
             })
         }
 
-        const complaint=await Complaint.findOneandDelete({roomNo});
+        const complaint=await Complaint.findOneAndDelete({_id:_id,userId:userId});
 
         if(!complaint){
             return res.status(404).json({
@@ -477,16 +563,16 @@ const deleteComplaint=async (req,res)=>{
 //resolve complaint
 const resolveComplaint=async (req,res)=>{
     try{
-        const {roomNo}=req.result;
-        if(!roomNo){
+        const {_id}=req.params;//complaint id
+        if(!_id){
             return res.status(400).json({
-                message:"RoomNo doesn't exist!"
+                message:"complaint Id missing!"
             })
         }
-        const complaint=await Complaint.findOne({roomNo});
+        const complaint=await Complaint.findById({_id});
 
         if(!complaint){
-            return res.status(400).json({
+            return res.status(404).json({
                 message:"complaint doesn't exist for this room"
             })
         }
@@ -509,8 +595,8 @@ const resolveComplaint=async (req,res)=>{
 const viewComplaint=async (req,res)=>{
     try{
         const complaint=await Complaint.find().sort({createdAt:-1});
-        if(!complaint){
-            return res.status(400).json({
+        if(complaint.length===0){
+            return res.status(404).json({
                 message:"No complant available!"
             })
         }
@@ -528,13 +614,13 @@ const viewRoomComplaint=async (req,res)=>{
     try{
         const {roomNo}=req.params;
         if(!roomNo){
-            return res.stauts(400).json({
+            return res.status(404).json({
                 message:"roomNo not found!"
             })
         }
-        const complaint=await Complaint.findOne({roomNo});
+        const complaint=await Complaint.find({roomNo});
         if(!complaint){
-            return res.status(400).json({
+            return res.status(404).json({
                 message:"no complaint found!"
             })
         }
@@ -547,10 +633,67 @@ const viewRoomComplaint=async (req,res)=>{
         })
     }
 }
-const profile=async (req,res)=>{
-    
+//get student profile
+const studentProfile = async (req, res) => {
+
+    try {
+
+        const userId = req.result._id;
+
+        const student =await Student.findOne({userId: userId})
+        .populate('userId','username email phoneNumber role profilePic aadhar');
+
+        if (!student) {
+            return res.status(404).json({
+                message: "Student not found!"
+            });
+        }
+
+        res.status(200).json({
+            username:student.userId.username,
+            email: student.userId.email,
+            phoneNumber:student.userId.phoneNumber,
+            role:student.userId.role,
+            profilePic:student.userId.profilePic,
+            aadhar:student.userId.aadhar,
+            roomNo:student.roomNo,
+            course:student.course,
+            year:student.year,
+            guardianName:student.guardianName,
+            guardianPhone:student.guardianPhone
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+            message: err.message
+        });
+
+    }
+};
+//get admin profile
+const adminProfile=async (req,res)=>{
+    try{
+        const _id=req.result._id;
+        const admin = await User.findById(userId).select(
+                'username email phoneNumber role aadhar profilePic'
+        );
+        res.status(200).json({
+            username:admin.username,
+            email:admin.email,
+            phoneNumber:admin.phoneNumber,
+            role:admin.role,
+            profilePic:admin.profilePic
+        })
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        })
+    }
 }
+//update student profile
+//clean room and bathroom
 module.exports={registerAdmin,registerStudent,loginAdmin,loginStudent,searchStudent,
-    isSpace,menu,getMenu,getMenuByDay,updateMessMenu,deleteMenu,fileComplaint,deleteComplaint,
-    resolveComplaint,viewComplaint,viewRoomComplaint
+    isSpace,createMenu,getMenu,getMenuByDay,updateMessMenu,deleteMenu,fileComplaint,deleteComplaint,
+    resolveComplaint,viewComplaint,viewRoomComplaint,logout,myComplaints,studentProfile,adminProfile
 }
