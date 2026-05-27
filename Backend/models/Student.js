@@ -40,6 +40,10 @@ const studentSchema=new Schema({
     feeDue:{
         type:String,
         required:true
+    },
+    onLeave:{
+        type:Boolean,
+        default:false
     }
 })
 

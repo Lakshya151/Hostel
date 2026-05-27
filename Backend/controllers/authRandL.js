@@ -1,20 +1,98 @@
 const Student = require('../models/Student');
 const Room=require('../models/Room');
 const Mess=require('../models/Mess');
-const bcrypt = require('bcrypt');
+const sendMail=require('../utils/sendMail');
 const jwt = require('jsonwebtoken');
 const redisClient=require('../config/redis');
 const User=require('../models/User');
 const Complaint = require('../models/Complaint');
 const validateAdmin=require('../middlewares/validateAdmin');
 const validateStudent=require('../middlewares/validateStudent');
+const Fee = require('../models/Fee');
+const validator = require("validator");
 
 
+// otp generator
+const generateOTP = () => {
+    return Math.floor(
+        100000 + Math.random() * 900000
+    ).toString();
+};
+//verify otp login
+const verifyOTP = async (req, res) => {
+    try {
+        const { email, otp } = req.body;
+
+        if (!email || !otp) {
+            return res.status(400).json({
+                message: "Missing credentials!"
+            });
+        }
+
+        const user = await User.findOne({email: email.trim().toLowerCase() });
+
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found!"
+            });
+        }
+
+        if (user.emailOTP !== otp) {
+            return res.status(400).json({
+                message: "Invalid OTP!"
+            });
+        }
+
+        if (user.otpExpiry < Date.now()) {
+            return res.status(400).json({
+                message: "OTP expired!"
+            });
+        }
+
+        // CLEAR OTP
+        user.emailOTP = null;
+        user.mobileOTP = null;
+        user.otpExpiry = null;
+
+        await user.save();
+
+        // LOGIN TOKEN
+        const token = jwt.sign({
+            _id: user._id,
+            role: user.role
+        }, process.env.JWT_KEY);
+
+        res.cookie("token", token, {
+            httpOnly: true,
+            secure: true,
+            sameSite: "strict"
+        });
+
+        res.status(200).json({
+            message: "Login successful",
+            user: {
+                _id: user._id,
+                username: user.username,
+                email: user.email,
+                role: user.role,
+                phoneNumber: user.phoneNumber,
+                profilePic: user.profilePic
+            }
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+            message: err.message
+        });
+
+    }
+};
 //register admin
 const registerAdmin=async (req,res)=>{
     try{
         validateAdmin(req.body);
-        const {username,email,password,phoneNumber,aadhar,profilePic}=req.body;
+        const {username,email,phoneNumber,aadhar,profilePic}=req.body;
         const normalizedEmail=email.trim().toLowerCase();
          const isExist = await User.findOne({
             email:normalizedEmail
@@ -28,18 +106,37 @@ const registerAdmin=async (req,res)=>{
         if(profilePic && !validator.isURL(profilePic)){
             throw new Error("Invalid profile picture URL");
         }
-        const hashedPassword=await bcrypt.hash(password,10);
+
+        // generate otp
+        const otp = generateOTP();
+
         const user=await User.create({
             username,
             email:normalizedEmail,
             phoneNumber,
-            password:hashedPassword,
             aadhar,
             profilePic,
-            role:"admin"
+            role:"admin",
+            emailOTP: otp,
+            mobileOTP: otp,
+            otpExpiry: Date.now() + 5 * 60 * 1000
         });
-        const token=jwt.sign({_id:user._id,role:user.role},process.env.JWT_KEY); 
-        const userToken=res.cookie('token',token,{httpOnly:true});//maxAge is expiry time
+
+        //send register otp
+        await sendMail(
+            normalizedEmail,
+            "Hostel Registration OTP",
+            `
+            <h2>Welcome to Hostel Management</h2>
+
+            <p>Your OTP is:</p>
+
+            <h1>${otp}</h1>
+
+            <p>OTP valid for 5 minutes.</p>
+            `
+        );
+
         res.status(201).json({
             message:"User Registered Successfully",
             user: {
@@ -61,19 +158,19 @@ const registerAdmin=async (req,res)=>{
 const loginAdmin = async (req, res) => {
 
     try {
-
-        const { email, password } = req.body;
-
-        // validation
-        if (!email || !password) {
+        const { email } = req.body;
+        
+        if (!email) {
             return res.status(400).json({
-                message: "Credentials missing!"
+                message: "Email is required!"
             });
         }
+    
+        const normalizedEmail =email.trim().toLowerCase();
+            
 
-        // find admin
         const user = await User.findOne({
-            email: email.trim().toLowerCase()
+            email: normalizedEmail
         });
 
         if (!user) {
@@ -88,52 +185,58 @@ const loginAdmin = async (req, res) => {
             });
         }
 
-        const isMatch = await bcrypt.compare(
-            password,
-            user.password
+        const otp = generateOTP();
+
+        user.emailOTP = otp;
+        user.mobileOTP = otp;
+
+        // otp expiry -> 5 mins
+        user.otpExpiry =
+            Date.now() + 5 * 60 * 1000;
+
+        await user.save();
+
+        // ADDED: send otp email
+        await sendMail(
+            user.email,
+            "Admin Login OTP",
+            `
+            <h2>Hostel Admin Login</h2>
+
+            <p>Your OTP is:</p>
+
+            <h1>${otp}</h1>
+
+            <p>
+                OTP valid for 5 minutes.
+            </p>
+            `
         );
 
-        if (!isMatch) {
-            return res.status(400).json({
-                message: "Invalid credentials"
-            });
-        }
+        // OPTIONAL:
+        // SEND MOBILE OTP HERE
+        // using Twilio / Fast2SMS
 
-        // generate token
-        const token = jwt.sign({
-            _id: user._id,
-            role: user.role,
-        }, process.env.JWT_KEY);
-        res.cookie('token', token, {
-            httpOnly: true,
-            secure:true,
-            sameSite:"strict"
-        });
         res.status(200).json({
-            message: "Admin login successful",
-            admin: {
-                _id: user._id,
-                username: user.username,
-                email: user.email,
-                role: user.role,
-                phoneNumber: user.phoneNumber,
-                profilePic:user.profilePic
-            }
-
+            message:
+                "OTP sent successfully to email and mobile"
         });
+
     } catch (err) {
+
         res.status(500).json({
             message: err.message
         });
+
     }
 };
 //register new Student
 const registerStudent=async(req,res)=>{
     try{
         validateStudent(req.body);
-        const {username,email,password,phoneNumber,aadhar,
+        const {username,email,phoneNumber,aadhar,
             roomNo,course,year,guardianName,
-            guardianPhone,feeDue,profilePic}=req.body;
+            guardianPhone,feeDue,profilePic,registrationFee}=req.body;
 
         const normalizedEmail = email.trim().toLowerCase();
         const isRegister=await User.findOne({email:normalizedEmail});
@@ -141,7 +244,7 @@ const registerStudent=async(req,res)=>{
             throw new Error("Invalid profile picture URL");
         }
         if(isRegister){
-            return res.status(200).json({
+            return res.status(409).json({
                 message:"Student already register!"
             })
         }
@@ -159,17 +262,57 @@ const registerStudent=async(req,res)=>{
                 message: "Room is already full!"
             });
         }
-        const hashedPassword=await bcrypt.hash(password,10);
+         
+         if(registrationFee === undefined || registrationFee <= 0){
+            return res.status(400).json({
+                message:"Valid registration fee required!"
+            });
+        }
 
-        const newUser=await User.create({username,email:normalizedEmail,password:hashedPassword,phoneNumber,aadhar,role:"student",profilePic});
+        const otp=generateOTP();
+
+        const newUser=await User.create({username,email:normalizedEmail,phoneNumber,aadhar,role:"student",profilePic,isResident:true
+            ,emailOTP: otp,
+            mobileOTP: otp,
+            otpExpiry: Date.now() + 5 * 60 * 1000
+        });
+        
+        // SEND REGISTRATION OTP
+        await sendMail(
+            normalizedEmail,
+            "Hostel Registration OTP",
+            `
+            <h2>Welcome to Hostel Management</h2>
+
+            <p>Your OTP is:</p>
+
+            <h1>${otp}</h1>
+
+            <p>
+                OTP valid for 5 minutes.
+            </p>
+            `
+        );
+
         const newStudent=await Student.create({userId:newUser._id,roomNo,course,year,guardianName,guardianPhone,feeDue});
+      
+        const registrationFeeRecord=await Fee.create({studentId:newStudent._id,feeType:"registration",
+            totalAmount:registrationFee,totalPaid:registrationFee,
+            installments:[
+                    {
+                        amount:registrationFee,
+                        status:"paid",
+                        paidAt:new Date()
+                    }
+                ]
+        });
+        
 
         room.student.push(newUser._id);
         await room.save();
 
         
-        const token =jwt.sign({_id:newUser._id,role:newUser.role},process.env.JWT_KEY);
-        res.cookie('token',token,{httpOnly: true});
+       
 
         res.status(201).json({
             message:"Register Successfull!",
@@ -183,7 +326,8 @@ const registerStudent=async(req,res)=>{
             },
             Student:newStudent,
             occupiedStudent: room.student.length,
-            availableSeat: room.capacity - room.student.length
+            availableSeat: room.capacity - room.student.length,
+            registrationFee: registrationFeeRecord
         })
     }catch(err){
         res.status(500).json({
@@ -192,45 +336,83 @@ const registerStudent=async(req,res)=>{
     }
 }
 //login as student
-const loginStudent=async (req,res)=>{
-    try{
-        const {password}=req.body;
-        const email=req.body.email.trim().toLowerCase();
-        if(!email || !password)throw new Error("Credential missing!");
-        const user=await User.findOne({email});
-        if(!user)throw new Error("user not found!");
-        const ismatch=await bcrypt.compare(password,user.password);
-        if(!ismatch)throw new Error("wrong password!");
-        if(user.role !== "student"){
-            throw new Error("Access denied!");
+const loginStudent = async (req, res) => {
+
+    try {
+        const {email} = req.body;
+
+        if (!email) {
+            return res.status(400).json({
+                message: "Email required!"
+            });
         }
-        const reply={
-            _id:user._id,
-            username:user.username,
-            email:user.email,
-            role:user.role,
-            phoneNumber:user.phoneNumber,
-            profilePic:user.profilePic
+
+        const normalizedEmail =email.trim().toLowerCase();
+            
+        const user = await User.findOne({email: normalizedEmail});
+
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found!"
+            });
         }
-        const token=jwt.sign({
-            _id:user._id,
-            role:user.role
-        },process.env.JWT_KEY)
-        res.cookie('token',token,{httpOnly: true});
+
+        if (user.role !== "student") {
+            return res.status(403).json({
+                message: "Access denied!"
+            });
+        }
+
+        // ADDED: generate otp
+        const otp = generateOTP();
+
+        user.emailOTP = otp;
+        user.mobileOTP = otp;
+
+        user.otpExpiry =Date.now() + 5 * 60 * 1000;
+            
+
+        await user.save();
+
+        // SEND EMAIL OTP
+        await sendMail(
+            user.email,
+            "Login OTP",
+            `
+            <h2>Hostel Login OTP</h2>
+
+            <h1>${otp}</h1>
+
+            <p>OTP valid for 5 minutes.</p>
+            `
+        );
+
+        // MOBILE OTP
+        // ADD FAST2SMS/TWILIO HERE
+
         res.status(200).json({
-            user:reply,
-            message:"login Successfull",
-        })
-    }catch(err){
+            message:
+                "OTP sent to email and mobile"
+        });
+
+    } catch (err) {
+
         res.status(500).json({
-            message:err.message
-        })
+            message: err.message
+        });
+
     }
-}
+};
 //logout
 const logout=async(req,res)=>{
     try{
-        const {token}=req.cookies;
+        const token = req.cookies?.token;
+
+        if(!token){
+            return res.status(401).json({
+                message:"No token found!"
+            });
+        }
         const payload = jwt.verify(
             token,
             process.env.JWT_KEY
@@ -247,40 +429,120 @@ const logout=async(req,res)=>{
         });
     }
 }
-//search Student
-const searchStudent=async (req,res)=>{
-    try{
-        const {query}=req.query;
-        const currentUser=req.result._id;
+//delete student
+const deleteStudent = async (req, res) => {
+    try {
+        const { id } = req.params;
 
-        if (!query || query.trim() === "") {
-            return res.status(400).json({ message: "Search query is required!" });
+        if (!id) {
+            return res.status(400).json({
+                message: "Student ID required!"
+            });
         }
 
-        const users = await User.find({
-            $or: [
-                { username: { $regex: query, $options: 'i' } },
-                { phoneNumber: { $regex: query, $options: 'i' } }
-            ],
-            _id: { $ne: currentUser } // exclude self
-        }).select('username phoneNumber email ');
+        // find student profile
+        const student = await Student.findOne({
+            userId: id
+        });
 
-        const finalUser=await Promise.all(// this will attach roomNo
-            users.map(async(user)=>{
-                const student=await Student.findOne({
-                    userId:user._id
-                }).select('roomNo')
-                return {
-                    _id:user._id,
-                    username:user.username,
-                    phoneNumber:user.phoneNumber,
-                    email:user.email,
-                    roomNo:student? student.roomNo :null
-                }
+        if (!student) {
+            return res.status(404).json({
+                message: "Student not found!"
+            });
+        }
+
+        const user = await User.findById(id);
+
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found!"
+            });
+        }
+
+        // remove from room
+        const room = await Room.findOne({roomNo: student.roomNo});
+
+        if (room) {
+            room.student = room.student.filter(
+                studentId =>
+                    studentId.toString() !== id
+            );
+            await room.save();
+        }
+
+        // mark as past resident
+        user.isResident = false;
+
+        await user.save();
+
+        res.status(200).json({
+            message:
+                "Student removed from hostel successfully!"
+        });
+
+    }catch (err) {
+        res.status(500).json({
+            message: err.message
+        });
+    }
+};
+//get all present resident student
+const allStudents=async (req,res)=>{
+    try{
+        const students=await Student.find().populate({
+            path:"userId",
+            match:{
+                isResident:true,
+                role:"student"
+            },select:"username email phoneNumber profilePic aadhar"
+        })
+
+        // remove null users
+        const activeStudents = students.filter(
+            student => student.userId !== null
+        );
+
+        if(activeStudents.length===0){
+            return res.status(404).json({
+                message:"No active student found"
             })
-        )
+        }
+        res.status(200).json({
+            totalStudents:activeStudents.length,
+            students:activeStudents
+        })
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        })
+    }
+}
+//get past students
+const pastStudents=async (req,res)=>{
+    try{
+        const students=await Student.find().populate({
+            path:"userId",
+            match:{
+                isResident:false,
+                role:"student"
+            },select:"username email phoneNumber profilePic aadhar"
+        })
 
-        res.status(200).json({user:finalUser});
+        // remove null users
+        const pastStudents = students.filter(
+            student => student.userId !== null
+        );
+
+        if(pastStudents.length===0){
+            return res.status(404).json({
+                message:"No past student found"
+            })
+        }
+
+        res.status(200).json({
+            totalPastStudents:pastStudents.length,
+            students:pastStudents
+        })
     }catch(err){
         res.status(500).json({
             message:err.message
@@ -381,7 +643,7 @@ const getMenuByDay=async (req,res)=>{
         }
 
         const menu=await Mess.find({day});
-        if(!menu){
+        if(menu.length===0){
             return res.status(404).json({
                 message:"menu for this day is not available!"
             })
@@ -396,11 +658,36 @@ const getMenuByDay=async (req,res)=>{
         })
     }
 }
+//get today menu
+const todayMenu=async (req,res)=>{
+    try{
+        const today = new Date().toLocaleDateString(
+            "en-US",
+            { weekday: "long" }
+        );
+        const menu=await Mess.find({day:today});
+        if(menu.length===0){
+            return res.status(404).json({
+                message:`menu not available for ${today}`
+            })
+        }
+
+        res.status(200).json({
+            day:today,
+            totalMenu=menu.length,
+            menu
+        });
+
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        })
+    }
+}
 //update mess menu
 const updateMessMenu = async (req, res) => {
 
     try {
-
         const {day,type} = req.params;
         if(!day||!type){
             return res.status(400).json({
@@ -498,6 +785,47 @@ const fileComplaint=async (req,res)=>{
         })
     }
 }
+//update complaint-> runValidator (check)
+const updateComplaint=async (req,res)=>{
+    try{
+        const complainId=req.params._id;
+        if(!complainId){
+            return res.status(404).json({
+                message:"Complaint id is missing"
+            })
+        }
+        const {title,description}=req.body;
+        const allowUpdate={};
+
+        if(title){
+            allowUpdate.title=title.trim();
+        }
+        if(description)allowUpdate.description=description.trim();
+
+        const updatedComplaint=await Complaint.findOneAndUpdate(
+            {_id:complainId},
+            allowUpdate,{
+                new:true,
+                runValidators:true
+            }
+        )
+        if (!updatedComplaint) {
+            return res.status(404).json({
+                message: "Complaint not found"
+            });
+        }
+
+        res.status(200).json({
+            message: "Complaint updated successfully",
+            complaint: updatedComplaint
+        });
+
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        })
+    }
+}
 //get my complaint
 const myComplaints = async (req, res) => {
 
@@ -531,7 +859,7 @@ const myComplaints = async (req, res) => {
 
     }
 };
-//delete complaint
+//delete complaint(user)
 const deleteComplaint=async (req,res)=>{
     try{
         const userId=req.result._id;
@@ -560,7 +888,7 @@ const deleteComplaint=async (req,res)=>{
         })
     }
 }
-//resolve complaint
+//resolve complaint (admin)
 const resolveComplaint=async (req,res)=>{
     try{
         const {_id}=req.params;//complaint id
@@ -576,7 +904,7 @@ const resolveComplaint=async (req,res)=>{
                 message:"complaint doesn't exist for this room"
             })
         }
-        complaint.status="resolve";
+        complaint.status="resolved";
         await complaint.save();
 
         res.status(200).json({
@@ -591,7 +919,7 @@ const resolveComplaint=async (req,res)=>{
         })
     }
 }
-//view all complaint
+//view all complaint(Admin)
 const viewComplaint=async (req,res)=>{
     try{
         const complaint=await Complaint.find().sort({createdAt:-1});
@@ -609,7 +937,7 @@ const viewComplaint=async (req,res)=>{
         })
     }
 }
-//view complaint by roomNo
+//view complaint by roomNo(admin)
 const viewRoomComplaint=async (req,res)=>{
     try{
         const {roomNo}=req.params;
@@ -619,7 +947,7 @@ const viewRoomComplaint=async (req,res)=>{
             })
         }
         const complaint=await Complaint.find({roomNo});
-        if(!complaint){
+        if(complaint.length===0){
             return res.status(404).json({
                 message:"no complaint found!"
             })
@@ -633,6 +961,81 @@ const viewRoomComplaint=async (req,res)=>{
         })
     }
 }
+//view complaint by status(admin)
+const viewComplaintByStatus = async (req, res) => {
+    try {
+        const complaint = await Complaint.aggregate([
+            {
+                $addFields: {
+                    statusOrder: {
+                        $switch: {
+                            branches: [
+                                { case: { $eq: ["$status", "pending"] }, then: 1 },
+                                { case: { $eq: ["$status", "in-progress"] }, then: 2 },
+                                { case: { $eq: ["$status", "resolved"] }, then: 3 }
+                            ],
+                            default: 4
+                        }
+                    }
+                }
+            },
+            {
+                $sort: {
+                    statusOrder: 1,
+                    createdAt: -1
+                }
+            }
+        ]);
+
+        if (complaint.length === 0) {
+            return res.status(404).json({
+                message: "No complaint available!"
+            });
+        }
+
+        res.status(200).json({
+            complaint
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+            message: err.message
+        });
+
+    }
+};
+//count complaints (admin)
+const complaintStats = async (req, res) => {
+    try {
+
+        const totalComplaints = await Complaint.countDocuments();
+
+        const pending = await Complaint.countDocuments({
+            status: "pending"
+        });
+
+        const inProgress = await Complaint.countDocuments({
+            status: "in-progress"
+        });
+
+        const resolved = await Complaint.countDocuments({
+            status: "resolved"
+        });
+
+        res.status(200).json({
+            totalComplaints,
+            pending,
+            inProgress,
+            resolved
+        });
+
+    } catch (err) {
+        res.status(500).json({
+            message: err.message
+        });
+    }
+};
 //get student profile
 const studentProfile = async (req, res) => {
 
@@ -674,7 +1077,7 @@ const studentProfile = async (req, res) => {
 //get admin profile
 const adminProfile=async (req,res)=>{
     try{
-        const _id=req.result._id;
+        const userId=req.result._id;
         const admin = await User.findById(userId).select(
                 'username email phoneNumber role aadhar profilePic'
         );
@@ -691,8 +1094,710 @@ const adminProfile=async (req,res)=>{
         })
     }
 }
-//update student profile
-//clean room and bathroom
+//update  profile 
+const updateProfile=async (req,res)=>{
+    try{
+        const userId=req.result._id;
+        const {username,email,phoneNumber,profilePic,aadhar}=req.body;
+
+        const updateData={};
+        
+        if(username){
+            updateData.username =username.trim();
+        }
+        if(email){
+            updateData.email=email.trim().toLowerCase();
+        }
+        if(phoneNumber){
+            updateData.phoneNumber=phoneNumber
+        }
+        if(profilePic){
+            if (!validator.isURL(profilePic)) {
+                return res.status(400).json({
+                    message: "Invalid profile picture URL"
+                });
+            }
+            updateData.profilePic=profilePic;
+        }
+        if (aadhar) {
+            if (!validator.isNumeric(aadhar)) {
+                return res.status(400).json({
+                    message: "Invalid Aadhaar number!"
+                });
+            }
+            if (aadhar.length !== 12) {
+                return res.status(400).json({
+                    message:
+                        "Aadhaar must be 12 digits!"
+                });
+            }
+            const existingAadhar =await User.findOne({//if this aadhar belong to another student 
+                aadhar,
+                _id: { $ne: userId }
+            });
+
+            if (existingAadhar) {
+                return res.status(409).json({
+                    message:
+                        "Aadhaar already exists!"
+                });
+            }
+            updateData.aadhar = aadhar;
+        }
+        const updateUser=await User.findOneAndUpdate({_id:userId},updateData,{new:true}).select(
+            'username email phoneNumber profilePic aadhar'
+        )
+        if(!updateUser){
+            return res.status(404).json({
+                message:"User not found!"
+            })
+        }
+        res.status(200).json({
+            message:"Profile updated successfully!",
+            user:updateUser
+        })
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        })
+    }
+}
+//update Profile as admin
+const updateByAdmin=async (req,res)=>{
+    try{
+        const {id}=req.params;
+        const {username,email,phoneNumber,aadhar,roomNo,
+            course,year,guardianName,guardianPhone}=req.body;
+
+        const updateUserData = {};
+        const updateStudentData = {};
+        
+        if(username){
+            updateUserData.username =username.trim();
+        }
+        if(email){
+            updateUserData.email=email.trim().toLowerCase();
+        }
+        if(phoneNumber){
+            updateUserData.phoneNumber=phoneNumber
+        }
+        if (aadhar) {
+            const aadhaarRegex =/^[0-9]{12}$/;
+            if (!aadhaarRegex.test(aadhar)) {
+                return res.status(400).json({
+                    message:
+                        "Invalid Aadhaar number!"
+                });
+            }
+            const existingAadhar =await User.findOne({
+                    aadhar,
+                    _id: { $ne: id }
+            });
+            if (existingAadhar) {
+                return res.status(409).json({
+                    message:"Aadhaar already exists!"   
+                });
+            }
+            updateUserData.aadhar =aadhar;
+        }
+        if (roomNo) updateStudentData.roomNo = roomNo;
+        if (course) updateStudentData.course = course;
+        if (year) updateStudentData.year = year;
+        if (guardianName) updateStudentData.guardianName =guardianName;
+        if (guardianPhone)updateStudentData.guardianPhone=guardianPhone;
+            
+        const updatedUser=await User.findOneAndUpdate({_id:id},updateUserData,{new:true}).select(
+            'username email phoneNumber aadhar'
+        )
+        const updatedStudent =await Student.findOneAndUpdate(
+                { userId: id },updateStudentData,{ new: true }
+            );
+        if(!updatedUser){
+            return res.status(404).json({
+                message:"User not found!"
+            })
+        }
+        res.status(200).json({
+            message:"Profile updated successfully!",
+            user:updatedUser,
+            student: updatedStudent
+        })
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        })
+    }
+}
+//create fee sturcture (installments)(admin)
+const createFeeStructure = async (req, res) => {
+
+    try {
+        const createdBy = req.result._id;
+        const {studentId,feeType,totalAmount,installments} = req.body;
+        
+        if (!studentId || !feeType ||!totalAmount ||!installments) {
+            return res.status(400).json({
+                message: "All fields are required!"
+            });
+        }
+
+        // check student exists
+        const student = await Student.findById(studentId);
+
+        if (!student) {
+            return res.status(404).json({
+                message: "Student not found!"
+            });
+        }
+        const alreadyExist = await Fee.findOne({studentId, feeType});
+
+        if(alreadyExist){
+            return res.status(409).json({
+                message:"Fee structure already exists!"
+            });
+        }
+        // installments validation
+        if (!Array.isArray(installments) ||installments.length === 0){
+            return res.status(400).json({
+                message: "Installments are required!"
+            });
+        }
+
+        // calculate installment total
+        const invalidInstallment = installments.some(item => !item.amount || item.amount <= 0);
+
+        if(invalidInstallment){
+            return res.status(400).json({
+                message:"Invalid installment amount!"
+            });
+        }
+        const installmentTotal = installments.reduce(
+            (sum, item) => sum + item.amount, 0
+        );
+        // check total amount match
+        if (installmentTotal !== totalAmount) {
+            return res.status(400).json({
+                message:
+                    "Installment total must equal totalAmount"
+            });
+        }
+
+        // create fee structure
+        const fee = await Fee.create({studentId,createdBy,feeType,totalAmount,totalPaid:0,installments});
+
+        res.status(201).json({
+
+            message:"Fee structure created successfully!",
+            fee
+        });
+
+    } catch (err) {
+        res.status(500).json({
+            message: err.message
+        });
+
+    }
+};
+//get my fee
+const getMyFees = async (req, res) => {
+
+    try {
+        const userId = req.result._id;
+        // find student
+        const student = await Student.findOne({ userId});
+
+        if(!student){
+            return res.status(404).json({
+                message:"Student not found!"
+            });
+        }
+
+        // get fees
+        const fees = await Fee.find({ studentId: student._id  })
+        .sort({ createdAt:-1 });
+
+        if(fees.length === 0){
+            return res.status(404).json({
+                message:"No fees found!"
+            });
+        }
+
+        res.status(200).json({
+            fees
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+            message: err.message
+        });
+
+    }
+};
+//get students with pendig fee (admin)
+const getPendingFees = async (req, res) => {
+
+    try {
+        const pendingFees = await Fee.find({
+            installments: {
+                $elemMatch: {
+                    status: "pending"
+                }
+            }
+
+        })
+        .populate({
+            path:"studentId",
+            populate:{
+                path:"userId",
+                select:"username email phoneNumber"
+            }
+        });
+
+        if(pendingFees.length === 0){
+            return res.status(404).json({
+                message:"No pending fees!"
+            });
+        }
+
+        res.status(200).json({
+            pendingFees
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+            message: err.message
+        });
+
+    }
+};
+//pay installment
+const payFee = async (req, res) => {
+
+    try {
+        const { feeId, installmentId } = req.params;
+        const fee = await Fee.findById(feeId);
+
+        if(!fee){
+            return res.status(404).json({
+                message:"Fee structure not found!"
+            });
+        }
+
+        // find installment
+        const installment = fee.installments.id(installmentId);
+
+        if(!installment){
+            return res.status(404).json({
+                message:"Installment not found!"
+            });
+        }
+
+        // already paid
+        if(installment.status === "paid"){
+            return res.status(400).json({
+                message:"Installment already paid!"
+            });
+        }
+
+        // update installment
+        installment.status = "paid";
+        installment.paidAt = new Date();
+
+        await fee.save();
+
+        res.status(200).json({
+
+            message:"Installment paid successfully!",
+
+            fee
+
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+            message: err.message
+        });
+
+    }
+};
+//cleaning room and bathroom
+
+//create room(admin)
+const createRoom=async (req,res)=>{
+    try{
+        const {roomNo,floor,capacity, type,isAC}=req.body;
+        if(!roomNo ||!capacity){
+            return res.status(400).json({
+                message:"Room number and capacity is required!"
+            })
+        }
+
+        const alreadyExist=await Room.findOne({roomNo});
+        if(alreadyExist){
+            return res.status(409).json({
+                message:"This room is already defined!"
+            })
+        }
+
+        const room=await Room.create({roomNo,floor,capacity,
+            type,isAC,student:[]
+        })
+
+        res.status(200).json({
+            message:"Room created Successfully!",
+            room
+        })
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        })
+    }
+}
+//update room(admin)
+const updateRoom=async (req,res)=>{
+    try{
+        const {roomNo}=req.params;
+        
+        if(!roomNo){
+            return res.status(400).json({
+                message:"roomNO is missing!"
+            })
+        }
+        const {capacity,floor,type,isAC}=req.body;
+
+        const room=await Room.findOne({roomNo});
+
+        if(!room){
+            return res.status(404).json({
+                message:"No room exist with this roomNo!"
+            })
+        }
+        if(capacity){
+            if(capacity<room.student.length){
+                return res.status(400).json({
+                    message:"capacity can't be less than occupied student!"
+                })
+            }
+            room.capacity=capacity;
+        }
+        if(floor){
+            room.floor=floor;
+        }
+        if(type){
+            room.type=type;
+        }
+        if(isAC!==undefined){
+            room.isAC=isAC;
+        }
+       await room.save();
+        res.status(200).json({
+            message:"info updated successfully!",
+            room
+        })
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        })
+    }
+}
+//get all rooms(admin)
+const getAllRooms=async (req,res)=>{
+    try{
+        const rooms=await Room.find().sort({createdAt:-1});
+        if(rooms.length===0){
+            return res.status(404).json({
+                message:"no room found!"
+            })
+        }
+        res.status(200).json({
+            rooms
+        })
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        })
+    }
+}
+//get room by number(admin)
+const getRoomByNumber=async (req,res)=>{
+    try{
+        const {roomNo}=req.params;
+        if(!roomNo){
+            return res.status(400).json({
+                message:"room number is not provided!"
+            })
+        }
+        const room=await Room.findOne({roomNo});
+        if(!room){
+            return res.status(404).json({
+                message:"No room found with this room number!"
+            })
+        }
+        res.status(200).json({
+            room
+        })
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        })
+    }
+}
+//delete room(admin)
+const deleteRoom=async (req,res)=>{
+    try{
+        const {roomNo}=req.params;
+        if(!roomNo){
+            return res.status(404).json({
+                message:"room Number isn't provided!"
+            })
+        }
+        const room = await Room.findOne({ roomNo });
+
+        if (!room) {
+            return res.status(404).json({
+                message:"Room not found!"
+            });
+        }
+        if(room.student.length>0){
+            return res.status(400).json({
+                message:"occupied room can't be deleted!"
+            })
+        }
+        await Room.findOneAndDelete({roomNo});
+
+        res.status(200).json({
+            message:"Room deleted Successfully!"
+        })
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        })
+    }
+}
+// shift student room(admin)
+const shiftStudentRoom = async (req, res) => {
+
+    try {
+
+        const { studentId } = req.params;
+        const { newRoomNo } = req.body;
+
+        if (!newRoomNo) {
+            return res.status(400).json({
+                message: "New room number required!"
+            });
+        }
+
+        // find student
+        const student = await Student.findById(studentId);
+
+        if (!student) {
+            return res.status(404).json({
+                message: "Student not found!"
+            });
+        }
+
+        // old room
+        const oldRoom = await Room.findOne({
+            roomNo: student.roomNo
+        });
+
+        // new room
+        const newRoom = await Room.findOne({
+            roomNo: newRoomNo
+        });
+
+        if (!newRoom) {
+            return res.status(404).json({
+                message: "New room not found!"
+            });
+        }
+
+        // check capacity
+        if (
+            newRoom.student.length >= newRoom.capacity
+        ) {
+            return res.status(400).json({
+                message: "New room is full!"
+            });
+        }
+
+        // remove from old room
+        oldRoom.student =
+            oldRoom.student.filter(
+                id => id.toString() !==
+                student.userId.toString()
+            );
+
+        // add to new room
+        newRoom.student.push(student.userId);
+
+        // update student room
+        student.roomNo = newRoomNo;
+
+        await oldRoom.save();
+        await newRoom.save();
+        await student.save();
+
+        res.status(200).json({
+            message:
+                "Student room shifted successfully!",
+            oldRoom: oldRoom.roomNo,
+            newRoom: newRoom.roomNo
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+            message: err.message
+        });
+
+    }
+};
+//search Student
+const searchStudent=async (req,res)=>{
+    try{
+        const {query}=req.query;
+        const currentUser=req.result._id;
+
+        if (!query || query.trim() === "") {
+            return res.status(400).json({ message: "Search query is required!" });
+        }
+
+        const users = await User.find({
+            $or: [
+                { username: { $regex: query, $options: 'i' } },
+                { phoneNumber: { $regex: query, $options: 'i' } }
+            ],
+            _id: { $ne: currentUser } // exclude self
+        }).select('username phoneNumber email ');
+
+        const finalUser=await Promise.all(// this will attach roomNo
+            users.map(async(user)=>{
+                const student=await Student.findOne({
+                    userId:user._id
+                }).select('roomNo')
+                return {
+                    _id:user._id,
+                    username:user.username,
+                    phoneNumber:user.phoneNumber,
+                    email:user.email,
+                    roomNo:student? student.roomNo :null
+                }
+            })
+        )
+
+        res.status(200).json({user:finalUser});
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        })
+    }
+}
+const applyLeave=async (req,res)=>{
+    try{
+        const {userId}=req.params;
+
+        if(!userId){
+            return res.status(404).json({
+                message:"user Id not present"
+            })
+        }
+
+        const student=await Student.findOne({userId});
+        if(!student){
+            return res.status(404).json({
+                message:"Student not found"
+            })
+        }
+
+        if(student.onLeave){
+            return res.status(400).json({
+                message:"Student already on leave"
+            })
+        }
+
+        student.onLeave=true;
+        await student.save();
+        res.status(200).json({
+            message: "Leave applied successfully!",
+            student
+        })
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        })
+    }
+}
+// return from leave
+const returnFromLeave = async (req, res) => {
+
+    try {
+
+        const { userId } = req.params;
+
+        const student = await Student.findOne({
+            userId
+        });
+
+        if (!student) {
+            return res.status(404).json({
+                message: "Student not found!"
+            });
+        }
+
+        if (!student.onLeave) {
+            return res.status(400).json({
+                message:
+                    "Student is not on leave!"
+            });
+        }
+
+        student.onLeave = false;
+
+        await student.save();
+
+        res.status(200).json({
+            message:
+                "Student returned successfully!",
+            student
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+            message: err.message
+        });
+
+    }
+};
+//number of students on leave
+const studentsOnLeave=async (req,res)=>{
+    try{
+        const students=await Student.find({onLeave:true})
+            .populate(
+                "userId",
+                "username email phoneNumber";
+            );
+        if(students.length===0){
+            return res.status(404).json({
+                message:"No student is on leave"
+            })
+        }
+        res.status(200).json({
+            noOfStudentsOnLeave:students.length,
+            students
+        })
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        })
+    }
+}
+
 module.exports={registerAdmin,registerStudent,loginAdmin,loginStudent,searchStudent,
     isSpace,createMenu,getMenu,getMenuByDay,updateMessMenu,deleteMenu,fileComplaint,deleteComplaint,
     resolveComplaint,viewComplaint,viewRoomComplaint,logout,myComplaints,studentProfile,adminProfile

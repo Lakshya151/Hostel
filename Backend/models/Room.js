@@ -1,22 +1,58 @@
 const mongoose = require('mongoose');
-const { Schema } = mongoose;
 
-const roomSchema = new Schema({
+const roomSchema = new mongoose.Schema({
 
-   roomNo:String,
+    roomNo: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true
+    },
+    capacity: {
+        type: Number,
+        required: true,
+        min: 1
+    },
+    student: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+    }],
 
-   floor:String,
+    floor: {
+        type: Number,
+        default: 1
+    },
 
-   capacity:{
-      type:Number,
-      enum:[2,3]
-   },
+    type: {
+        type: String,
+        enum: ["single", "double", "triple"],
+        default: "double"
+    },
+    isAC: {
+        type: Boolean,
+        default: false
+    },
 
-   student:[{
-      type:mongoose.Schema.Types.ObjectId,
-      ref:"User"
-   }]
+    status: {
+        type: String,
+        enum: ["available", "full", "maintenance"],
+        default: "available"
+    }
 
+}, {
+    timestamps: true
 });
 
-module.exports = mongoose.model('Room', roomSchema);
+// auto update room status
+roomSchema.pre('save', function(next) {
+
+    if (this.student.length >= this.capacity) {
+        this.status = "full";
+    } else if (this.status !== "maintenance") {
+        this.status = "available";
+    }
+
+    next();
+});
+
+module.exports = mongoose.model("Room", roomSchema);
