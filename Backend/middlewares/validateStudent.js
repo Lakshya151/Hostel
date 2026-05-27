@@ -8,7 +8,6 @@ const validateStudent= (data)=>{
     }
     if(!validator.isMobilePhone(data.phoneNumber,'en-IN'))throw new Error("Number is wrong");
     if(!validator.isMobilePhone(data.guardianPhone,'en-IN'))throw new Error("Number is wrong");
-    if(!validator.isStrongPassword(data.password))throw new Error("Weak Password");
     if(data.username.length<3 ||data.username.length>50)throw new Error("Name is too long /short");
     if(data.guardianName.length<3 ||data.guardianName.length>50)throw new Error("Name is too long /short");
     if (!/^[0-9]{12}$/.test(data.aadhar)) {
