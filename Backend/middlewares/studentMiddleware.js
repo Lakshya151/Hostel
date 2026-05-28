@@ -1,26 +1,93 @@
-const jwt=require('jsonwebtoken');
-const User=require('../models/User');
+const jwt = require('jsonwebtoken');
 
-const studentMiddleware=async (req,res,next)=>{
-    try{
-        const {token}=req.cookies;
-        if(!token){
-            return res.status(400).json({
-                message:"tokens not present!"
-            })
+const User = require('../models/User');
+
+const redisClient =
+    require('../config/redis');
+
+const studentMiddleware =
+    async (req, res, next) => {
+
+    try {
+
+        const token = req.cookies?.token;
+
+        if (!token) {
+
+            return res.status(401).json({
+                message: "Authentication required!"
+            });
         }
 
-        const payload=jwt.verify(token,process.env.JWT_KEY);
-        const {_id}=payload;
-        if(!_id)throw new Error("Id not present!");
-        const result=await User.findById(_id);
-        if(!result)throw new Error("Student isn't registered")
-        req.result=result;
+        // check blacklist
+        const isBlocked =
+            await redisClient.get(
+                `token:${token}`
+            );
+
+        if (isBlocked) {
+
+            return res.status(401).json({
+                message:
+                    "Session expired. Please login again!"
+            });
+        }
+
+        // verify token
+        const payload = jwt.verify(
+            token,
+            process.env.JWT_KEY
+        );
+
+        const { _id, role } = payload;
+
+        if (!_id) {
+
+            return res.status(401).json({
+                message: "Invalid token!"
+            });
+        }
+
+        // allow only students
+        if (role !== "student") {
+
+            return res.status(403).json({
+                message:
+                    "Access denied! Students only."
+            });
+        }
+
+        const result =
+            await User.findById(_id);
+
+        if (!result) {
+
+            return res.status(404).json({
+                message:
+                    "Student not found!"
+            });
+        }
+
+        // extra safety
+        if (!result.isResident) {
+
+            return res.status(403).json({
+                message:
+                    "Student is no longer active!"
+            });
+        }
+
+        req.result = result;
+
         next();
-    }catch(err){
-        res.status(500).json({
-            message:err.message
-        })
+
+    } catch (err) {
+
+        return res.status(401).json({
+            message: "Invalid or expired token!"
+        });
+
     }
-}
-module.exports=studentMiddleware;
+};
+
+module.exports = studentMiddleware;

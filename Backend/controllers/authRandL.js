@@ -57,14 +57,12 @@ const verifyOTP = async (req, res) => {
         await user.save();
 
         // LOGIN TOKEN
-        const token = jwt.sign({
-            _id: user._id,
-            role: user.role
-        }, process.env.JWT_KEY);
-
+        const token = jwt.sign({_id: user._id,role: user.role},
+            process.env.JWT_KEY,{expiresIn: "7d"}
+        );
         res.cookie("token", token, {
             httpOnly: true,
-            secure: true,
+            secure: process.env.NODE_ENV === "production",
             sameSite: "strict"
         });
 
@@ -88,11 +86,147 @@ const verifyOTP = async (req, res) => {
 
     }
 };
+// student dashboard
+const studentDashboard = async (req, res) => {
+    try {
+
+        const userId = req.result._id;
+
+        // student profile
+        const student = await Student.findOne({userId})
+        .populate(
+            'userId',
+            'username email phoneNumber profilePic address'
+        );
+
+        if (!student) {
+            return res.status(404).json({
+                message: "Student not found!"
+            });
+        }
+
+        // complaints
+        const complaints = await Complaint.find({ userId})
+           .sort({ createdAt: -1 });
+
+        const pendingComplaints =complaints.filter(
+                complaint => complaint.status === "pending")
+            .length;
+            
+
+        // fees
+        const fees = await Fee.find({
+            studentId: student._id
+        });
+
+        // today's mess menu
+        const today = new Date().toLocaleString('en-US', {
+            weekday: 'long'
+        });
+        
+        const messMenu = await Mess.find({ day: today});
+
+        res.status(200).json({
+
+            profile: student,
+
+            room: {roomNo: student.roomNo},
+
+            complaints: {totalComplaints:
+                    complaints.length,
+                pendingComplaints
+            },
+                
+            fees,
+
+            messMenu
+
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+            message: err.message
+        });
+
+    }
+};
+// admin dashboard
+const adminDashboard = async (req, res) => {
+
+    try {
+
+        // students
+        const totalStudents = await User.countDocuments({role: "student"});
+
+        const activeStudents = await User.countDocuments({role: "student",isResident: true});
+
+        const pastStudents = await User.countDocuments({role: "student",isResident: false});
+
+        // rooms
+        const totalRooms = await Room.countDocuments();
+
+        const occupiedRooms = await Room.countDocuments({status: "full"});
+
+        const availableRooms = await Room.countDocuments({status: "available"});
+
+        // complaints
+        const totalComplaints =await Complaint.countDocuments();
+            
+        const pendingComplaints =await Complaint.countDocuments({
+                status: "pending"
+        });
+            
+
+        const resolvedComplaints =await Complaint.countDocuments({
+                status: "resolved"
+        }); 
+
+        // pending fees
+        const pendingFees = await Fee.countDocuments({
+            installments: {
+                $elemMatch: {
+                    status: "pending"
+                }
+            }
+        });
+
+        res.status(200).json({
+
+            students: {
+                totalStudents,
+                activeStudents,
+                pastStudents
+            },
+            rooms: {
+                totalRooms,
+                occupiedRooms,
+                availableRooms
+            },
+            complaints: {
+                totalComplaints,
+                pendingComplaints,
+                resolvedComplaints
+            },
+            fees: {
+                pendingFees
+            }
+
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+            message: err.message
+        });
+
+    }
+};
 //register admin
 const registerAdmin=async (req,res)=>{
     try{
         validateAdmin(req.body);
-        const {username,email,phoneNumber,aadhar,profilePic}=req.body;
+        const {username,email,phoneNumber,aadhar,profilePic,address}=req.body;
         const normalizedEmail=email.trim().toLowerCase();
          const isExist = await User.findOne({
             email:normalizedEmail
@@ -106,6 +240,13 @@ const registerAdmin=async (req,res)=>{
         if(profilePic && !validator.isURL(profilePic)){
             throw new Error("Invalid profile picture URL");
         }
+         // address validation
+        if (!address ||!address.city ||!address.state || !address.pincode) {
+            return res.status(400).json({
+                message:
+                    "Complete address is required!"
+            });
+        }
 
         // generate otp
         const otp = generateOTP();
@@ -115,6 +256,7 @@ const registerAdmin=async (req,res)=>{
             email:normalizedEmail,
             phoneNumber,
             aadhar,
+            address,
             profilePic,
             role:"admin",
             emailOTP: otp,
@@ -145,7 +287,8 @@ const registerAdmin=async (req,res)=>{
                 email: user.email,
                 role: user.role,
                 phoneNumber: user.phoneNumber,
-                profilePic: user.profilePic
+                profilePic: user.profilePic,
+                address
             }
         });
     }catch(err){
@@ -235,8 +378,8 @@ const registerStudent=async(req,res)=>{
     try{
         validateStudent(req.body);
         const {username,email,phoneNumber,aadhar,
-            roomNo,course,year,guardianName,
-            guardianPhone,feeDue,profilePic,registrationFee}=req.body;
+            roomNo,course,year,guardianName,collegeName,
+            guardianPhone,feeDue,profilePic,registrationFee,address}=req.body;
 
         const normalizedEmail = email.trim().toLowerCase();
         const isRegister=await User.findOne({email:normalizedEmail});
@@ -268,10 +411,17 @@ const registerStudent=async(req,res)=>{
                 message:"Valid registration fee required!"
             });
         }
+        // address validation
+        if (!address ||!address.city ||!address.state || !address.pincode) {
+            return res.status(400).json({
+                message:
+                    "Complete address is required!"
+            });
+        }
 
         const otp=generateOTP();
 
-        const newUser=await User.create({username,email:normalizedEmail,phoneNumber,aadhar,role:"student",profilePic,isResident:true
+        const newUser=await User.create({username,email:normalizedEmail,phoneNumber,aadhar,address,role:"student",profilePic,isResident:true
             ,emailOTP: otp,
             mobileOTP: otp,
             otpExpiry: Date.now() + 5 * 60 * 1000
@@ -294,7 +444,7 @@ const registerStudent=async(req,res)=>{
             `
         );
 
-        const newStudent=await Student.create({userId:newUser._id,roomNo,course,year,guardianName,guardianPhone,feeDue});
+        const newStudent=await Student.create({userId:newUser._id,roomNo,course,collegeName,year,guardianName,guardianPhone,feeDue});
       
         const registrationFeeRecord=await Fee.create({studentId:newStudent._id,feeType:"registration",
             totalAmount:registrationFee,totalPaid:registrationFee,
@@ -322,7 +472,8 @@ const registerStudent=async(req,res)=>{
                 email:normalizedEmail,
                 role: newUser.role,
                 phoneNumber: newUser.phoneNumber,
-                profilePic
+                profilePic,
+                address
             },
             Student:newStudent,
             occupiedStudent: room.student.length,
@@ -362,7 +513,11 @@ const loginStudent = async (req, res) => {
                 message: "Access denied!"
             });
         }
-
+        if(!user.isResident){
+            return res.status(403).json({
+                message:"Access denied"
+            })
+        }
         // ADDED: generate otp
         const otp = generateOTP();
 
@@ -417,7 +572,9 @@ const logout=async(req,res)=>{
             token,
             process.env.JWT_KEY
         );
-        await redisClient.set(`token:${token}`,'Blocked');
+        await redisClient.set(`token:${token}`,"Blocked",
+            "EX", 60 * 60 * 24 * 7
+        );
          res.clearCookie("token");
         res.status(200).json({
             message:"Logout Successfull",
@@ -487,15 +644,46 @@ const deleteStudent = async (req, res) => {
     }
 };
 //get all present resident student
-const allStudents=async (req,res)=>{
+const allResidentStudents=async (req,res)=>{
     try{
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+         
+        const residentStudentStats = await Student.aggregate([ //for pagination , to get the count of resident students
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "userId",
+                    foreignField: "_id",
+                    as: "user"
+                }
+            },
+            {
+                $unwind: "$user"
+            },
+            {
+                $match: {
+                    "user.isResident": true,
+                    "user.role": "student"
+                }
+            },
+            {
+                $count: "count"
+            }
+        ]);
+
+        const totalStudents =residentStudentStats[0]?.count || 0;
+        
         const students=await Student.find().populate({
             path:"userId",
             match:{
                 isResident:true,
                 role:"student"
             },select:"username email phoneNumber profilePic aadhar"
-        })
+        }).skip(skip)
+        .limit(limit)
+        .sort({createdAt:-1});
 
         // remove null users
         const activeStudents = students.filter(
@@ -508,8 +696,11 @@ const allStudents=async (req,res)=>{
             })
         }
         res.status(200).json({
-            totalStudents:activeStudents.length,
-            students:activeStudents
+            currentPage: page,
+            totalPages:Math.ceil(totalStudents/ limit),
+            totalStudents,
+            studentsPerPage: limit,
+            students: activeStudents
         })
     }catch(err){
         res.status(500).json({
@@ -517,16 +708,113 @@ const allStudents=async (req,res)=>{
         })
     }
 }
+//get student using college name
+const getStudentByCollege=async (req,res)=>{
+    try{
+        const {collegeName}=req.params;
+
+        if(!collegeName){
+            return res.status(400).json({
+                message:"College  name is required"
+            })
+        }
+
+        const page=parseInt(req.query.page)||1;
+        const limit=parseInt(req.query.limit)||10;
+        const skip=(page-1)*limit;
+
+        const totalStudents =await Student.countDocuments({
+            collegeName: {
+                $regex: collegeName,
+                $options: "i"
+            }
+        });
+        const students = await Student.find({
+                collegeName: {
+                    $regex: collegeName,
+                    $options: "i"
+                }
+        }).populate(
+                "userId",
+                "username email phoneNumber profilePic"
+            ).skip(skip)
+            .limit(limit)
+            .sort({ createdAt: -1 });
+        if (students.length === 0) {
+
+            return res.status(404).json({
+                message:
+                    "No students found for this college!"
+            });
+        }
+
+        const totalPages =
+            Math.ceil(totalStudents / limit);
+
+        return res.status(200).json({
+
+            collegeName,
+
+            totalStudents,
+
+            totalPages,
+
+            currentPage: page,
+
+            hasNextPage: page < totalPages,
+
+            hasPrevPage: page > 1,
+
+            students
+
+        });
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        })
+    }
+            
+}
 //get past students
 const pastStudents=async (req,res)=>{
     try{
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+         
+        const nonResidentStudent = await Student.aggregate([ //for pagination , to get the count of non resident students
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "userId",
+                    foreignField: "_id",
+                    as: "user"
+                }
+            },
+            {
+                $unwind: "$user"
+            },
+            {
+                $match: {
+                    "user.isResident": false,
+                    "user.role": "student"
+                }
+            },
+            {
+                $count: "count"
+            }
+        ]);
+
+        const totalStudents =nonResidentStudent[0]?.count || 0;
         const students=await Student.find().populate({
             path:"userId",
             match:{
                 isResident:false,
                 role:"student"
             },select:"username email phoneNumber profilePic aadhar"
-        })
+        }).skip(skip)
+        .limit(limit)
+        .sort({createdAt:-1})
 
         // remove null users
         const pastStudents = students.filter(
@@ -540,7 +828,10 @@ const pastStudents=async (req,res)=>{
         }
 
         res.status(200).json({
-            totalPastStudents:pastStudents.length,
+            currentPage: page,
+            totalPages:Math.ceil(totalStudents/ limit),
+            totalStudents,
+            studentsPerPage: limit,
             students:pastStudents
         })
     }catch(err){
@@ -594,7 +885,22 @@ const isSpace=async (req,res)=>{
 const createMenu=async (req,res)=>{
     try{
         const {day,breakfast,lunch,snacks,dinner,type}=req.body;
-        if(!day ||!breakfast|| !lunch || !snacks || !dinner || !type)throw new Error("Some fields are missing!");
+
+        if(!day || !type){
+            return res.status(400).json({
+                message:"day and food-type is required"
+            })
+        }
+        if(
+            !Array.isArray(breakfast) ||
+            !Array.isArray(lunch) ||
+            !Array.isArray(snacks) ||
+            !Array.isArray(dinner)
+        ){
+            return res.status(400).json({
+                message:"Credential missing"
+            })
+        }
         const alreadyExist=await Mess.findOne({day,type});
         if(alreadyExist){
             return res.status(400).json({
@@ -617,13 +923,25 @@ const createMenu=async (req,res)=>{
 //get all menu
 const getMenu=async (req,res)=>{
     try{
-        const menu=await Mess.find().sort({createdAt:-1});
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+         
+        const totalMenus = await Mess.countDocuments();
+        const menu=await Mess.find().skip(skip).limit(limit)
+        .sort({createdAt:-1});
         if(menu.length===0){
             return res.status(404).json({
                 message:"menu will be available soon!"
             })
         }
+        const totalPages=Math.ceil(totalMenus / limit);
         res.status(200).json({
+            totalMenus,
+            totalPages,
+            currentPage: page,
+            hasNextPage: page < totalPages,
+            hasPrevPage: page > 1,
             menu
         });
     }catch(err){
@@ -635,21 +953,25 @@ const getMenu=async (req,res)=>{
 //get menu by day
 const getMenuByDay=async (req,res)=>{
     try{
-        const {day}=req.params;
+        let {day}=req.params;
         if(!day){
             return res.status(400).json({
                 message:"Please enter day!"
             })
         }
 
-        const menu=await Mess.find({day});
+        day =day.charAt(0).toUpperCase() +day.slice(1).toLowerCase();
+            
+        const menu=await Mess.find({day}).sort({createdAt:-1});
         if(menu.length===0){
             return res.status(404).json({
-                message:"menu for this day is not available!"
+                message:`menu for ${day} is not available!`
             })
         }
 
         res.status(200).json({
+            totalMenu:menu.length,
+            day,
             menu
         });
     }catch(err){
@@ -674,7 +996,7 @@ const todayMenu=async (req,res)=>{
 
         res.status(200).json({
             day:today,
-            totalMenu=menu.length,
+            totalMenu:menu.length,
             menu
         });
 
@@ -695,9 +1017,9 @@ const updateMessMenu = async (req, res) => {
             })
         }
         const updatedMenu = await Mess.findOneAndUpdate(
-            {day,type},        // find by day
-            req.body,       // updated data
-            { new: true }   // return updated document
+            {day,type},  
+            req.body,   
+            { new: true ,runValidators:true} 
         );
 
         if (!updatedMenu) {
@@ -786,46 +1108,78 @@ const fileComplaint=async (req,res)=>{
     }
 }
 //update complaint-> runValidator (check)
-const updateComplaint=async (req,res)=>{
-    try{
-        const complainId=req.params._id;
-        if(!complainId){
-            return res.status(404).json({
-                message:"Complaint id is missing"
-            })
-        }
-        const {title,description}=req.body;
-        const allowUpdate={};
+const updateComplaint = async (req, res) => {
 
-        if(title){
-            allowUpdate.title=title.trim();
-        }
-        if(description)allowUpdate.description=description.trim();
+    try {
+        const complaintId = req.params._id;
+        const userId = req.result._id;
 
-        const updatedComplaint=await Complaint.findOneAndUpdate(
-            {_id:complainId},
-            allowUpdate,{
-                new:true,
-                runValidators:true
-            }
-        )
-        if (!updatedComplaint) {
-            return res.status(404).json({
-                message: "Complaint not found"
+        if (!complaintId) {
+            return res.status(400).json({
+                message: "Complaint id is missing!"
             });
         }
 
-        res.status(200).json({
-            message: "Complaint updated successfully",
-            complaint: updatedComplaint
+        const { title, description } = req.body;
+        const allowUpdate = {};
+
+        if (title && title.trim() !== "") {
+            allowUpdate.title = title.trim();
+        }
+
+        if (description && description.trim() !== "") {
+            allowUpdate.description =description.trim();
+        }
+
+        // no fields provided
+        if (Object.keys(allowUpdate).length === 0) {
+            return res.status(400).json({
+                message:
+                    "No valid fields provided for update!"
+            });
+        }
+        // find complaint
+        const complaint =await Complaint.findOne({
+            _id: complaintId,
+            userId
+        });
+            
+        if (!complaint) {
+            return res.status(404).json({
+                message:"Complaint not found!"
+            });    
+        }
+
+        // prevent update after resolved
+        if (complaint.status === "resolved") {
+            return res.status(400).json({
+                message:
+                    "Resolved complaint cannot be updated!"
+            });
+        }
+
+        // update fields
+        Object.assign(complaint,allowUpdate);
+
+        await complaint.save();
+
+        return res.status(200).json({
+
+            message:
+                "Complaint updated successfully",
+
+            complaint
+
         });
 
-    }catch(err){
-        res.status(500).json({
-            message:err.message
-        })
+    } catch (err) {
+
+        return res.status(500).json({
+            message: err.message
+        });
+
     }
-}
+};
 //get my complaint
 const myComplaints = async (req, res) => {
 
@@ -833,10 +1187,21 @@ const myComplaints = async (req, res) => {
 
         const userId = req.result._id;
 
+        if(!userId){
+            return res.status(404).json({
+                message:"User Id not found"
+            })
+        }
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const totalComplaints=await Complaint.countDocuments({userId});
         const complaints =
             await Complaint.find({
                 userId
-            }).sort({ createdAt: -1 });
+            }).skip(skip).limit(limit)
+            .sort({ createdAt: -1 });
 
         if (complaints.length === 0) {
 
@@ -846,8 +1211,13 @@ const myComplaints = async (req, res) => {
             });
 
         }
-
+        const totalPages=Math.ceil(totalComplaints/limit);
         res.status(200).json({
+            totalComplaints,
+            totalPages,
+            currentPage: page,
+            hasNextPage: page < totalPages,
+            hasPrevPage: page > 1,
             complaints
         });
 
@@ -888,7 +1258,7 @@ const deleteComplaint=async (req,res)=>{
         })
     }
 }
-//resolve complaint (admin)
+//resolve complaint (user)
 const resolveComplaint=async (req,res)=>{
     try{
         const {_id}=req.params;//complaint id
@@ -897,7 +1267,7 @@ const resolveComplaint=async (req,res)=>{
                 message:"complaint Id missing!"
             })
         }
-        const complaint=await Complaint.findById({_id});
+        const complaint=await Complaint.findById(_id);
 
         if(!complaint){
             return res.status(404).json({
@@ -922,14 +1292,30 @@ const resolveComplaint=async (req,res)=>{
 //view all complaint(Admin)
 const viewComplaint=async (req,res)=>{
     try{
-        const complaint=await Complaint.find().sort({createdAt:-1});
-        if(complaint.length===0){
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const totalComplaints=await Complaint.countDocuments();
+        const complaints=await Complaint.find().skip(skip).limit(limit)
+        .sort({createdAt:-1});
+        if(complaints.length===0){
             return res.status(404).json({
                 message:"No complant available!"
             })
         }
+        
+        const totalPages=Math.ceil(totalComplaints/limit);
         res.status(200).json({
-            complaint
+            totalPages,
+            totalComplaints,
+            currentPage: page,
+
+            hasNextPage: page < totalPages,
+
+            hasPrevPage: page > 1,
+
+            complaints
         });
     }catch(err){
         res.status(500).json({
@@ -946,14 +1332,30 @@ const viewRoomComplaint=async (req,res)=>{
                 message:"roomNo not found!"
             })
         }
-        const complaint=await Complaint.find({roomNo});
-        if(complaint.length===0){
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const totalComplaints=await Complaint.countDocuments({roomNo});
+        const complaints=await Complaint.find({roomNo}).skip(skip).limit(limit)
+        .sort({createdAt:-1});
+        if(complaints.length===0){
             return res.status(404).json({
                 message:"no complaint found!"
             })
         }
+
+        const totalPages=Math.ceil(totalComplaints/limit);
         res.status(200).json({
-            complaint
+            totalPages,
+
+            currentPage: page,
+
+            hasNextPage: page < totalPages,
+
+            hasPrevPage: page > 1,
+
+            complaints
         })
     }catch(err){
         res.status(500).json({
@@ -963,43 +1365,108 @@ const viewRoomComplaint=async (req,res)=>{
 }
 //view complaint by status(admin)
 const viewComplaintByStatus = async (req, res) => {
+
     try {
-        const complaint = await Complaint.aggregate([
+
+        const page =
+            parseInt(req.query.page) || 1;
+
+        const limit =
+            parseInt(req.query.limit) || 10;
+
+        const skip = (page - 1) * limit;
+
+        // total complaints
+        const totalComplaints =
+            await Complaint.countDocuments();
+
+        const complaints = await Complaint.aggregate([
+
             {
                 $addFields: {
                     statusOrder: {
                         $switch: {
                             branches: [
-                                { case: { $eq: ["$status", "pending"] }, then: 1 },
-                                { case: { $eq: ["$status", "in-progress"] }, then: 2 },
-                                { case: { $eq: ["$status", "resolved"] }, then: 3 }
+                                {
+                                    case: {
+                                        $eq: [
+                                            "$status",
+                                            "pending"
+                                        ]
+                                    },
+                                    then: 1
+                                },
+                                {
+                                    case: {
+                                        $eq: [
+                                            "$status",
+                                            "in-progress"
+                                        ]
+                                    },
+                                    then: 2
+                                },
+                                {
+                                    case: {
+                                        $eq: [
+                                            "$status",
+                                            "resolved"
+                                        ]
+                                    },
+                                    then: 3
+                                }
                             ],
                             default: 4
                         }
                     }
                 }
             },
+
             {
                 $sort: {
                     statusOrder: 1,
                     createdAt: -1
                 }
+            },
+
+            {
+                $skip: skip
+            },
+
+            {
+                $limit: limit
             }
+
         ]);
 
-        if (complaint.length === 0) {
+        if (complaints.length === 0) {
+
             return res.status(404).json({
-                message: "No complaint available!"
+                message: "No complaints available!"
             });
         }
 
-        res.status(200).json({
-            complaint
+        const totalPages =
+            Math.ceil(totalComplaints / limit);
+
+        return res.status(200).json({
+
+            totalComplaints,
+
+            totalPages,
+
+            currentPage: page,
+
+            hasNextPage: page < totalPages,
+
+            hasPrevPage: page > 1,
+
+            complaints
+
         });
 
     } catch (err) {
 
-        res.status(500).json({
+        return res.status(500).json({
             message: err.message
         });
 
@@ -1044,7 +1511,7 @@ const studentProfile = async (req, res) => {
         const userId = req.result._id;
 
         const student =await Student.findOne({userId: userId})
-        .populate('userId','username email phoneNumber role profilePic aadhar');
+        .populate('userId','username email phoneNumber role profilePic aadhar address');
 
         if (!student) {
             return res.status(404).json({
@@ -1061,9 +1528,11 @@ const studentProfile = async (req, res) => {
             aadhar:student.userId.aadhar,
             roomNo:student.roomNo,
             course:student.course,
+            collegeName:student.collegeName,
             year:student.year,
             guardianName:student.guardianName,
-            guardianPhone:student.guardianPhone
+            guardianPhone:student.guardianPhone,
+            address:student.userId.address
         });
 
     } catch (err) {
@@ -1078,15 +1547,27 @@ const studentProfile = async (req, res) => {
 const adminProfile=async (req,res)=>{
     try{
         const userId=req.result._id;
+        
+        if(!userId){
+            return res.status(404).json({
+                message:"user Id not found"
+            })
+        }
         const admin = await User.findById(userId).select(
-                'username email phoneNumber role aadhar profilePic'
+                'username email phoneNumber role aadhar profilePic address'
         );
+        if(!admin){
+            return res.status(404).json({
+                message:"Admin not found"
+            });
+        }
         res.status(200).json({
             username:admin.username,
             email:admin.email,
             phoneNumber:admin.phoneNumber,
             role:admin.role,
-            profilePic:admin.profilePic
+            profilePic:admin.profilePic,
+            address:admin.address
         })
     }catch(err){
         res.status(500).json({
@@ -1095,46 +1576,104 @@ const adminProfile=async (req,res)=>{
     }
 }
 //update  profile 
-const updateProfile=async (req,res)=>{
-    try{
-        const userId=req.result._id;
-        const {username,email,phoneNumber,profilePic,aadhar}=req.body;
+const updateProfile = async (req, res) => {
 
-        const updateData={};
-        
-        if(username){
-            updateData.username =username.trim();
+    try {
+
+        const userId = req.result._id;
+
+        const {
+            username,
+            email,
+            phoneNumber,
+            profilePic,
+            aadhar
+        } = req.body;
+
+        // find user first
+        const user = await User.findById(userId);
+
+        if (!user) {
+
+            return res.status(404).json({
+                message: "User not found!"
+            });
         }
-        if(email){
-            updateData.email=email.trim().toLowerCase();
+
+        const updateData = {};
+
+        if (username) {
+            updateData.username =
+                username.trim();
         }
-        if(phoneNumber){
-            updateData.phoneNumber=phoneNumber
+
+        if (email) {
+            updateData.email =
+                email.trim().toLowerCase();
         }
-        if(profilePic){
+
+        if (phoneNumber) {
+            updateData.phoneNumber =
+                phoneNumber;
+        }
+
+        // profile picture cooldown
+        if (profilePic) {
+
             if (!validator.isURL(profilePic)) {
                 return res.status(400).json({
-                    message: "Invalid profile picture URL"
+                    message:
+                        "Invalid profile picture URL"
                 });
             }
-            updateData.profilePic=profilePic;
-        }
-        if (aadhar) {
-            if (!validator.isNumeric(aadhar)) {
+
+            const now = new Date();
+
+            const lastUpdate =
+                user.lastProfileUpdate;
+
+            // 7 day cooldown
+            if (
+                lastUpdate &&
+                now - lastUpdate <
+                7 * 24 * 60 * 60 * 1000
+            ) {
+
                 return res.status(400).json({
-                    message: "Invalid Aadhaar number!"
+                    message:
+                        "Profile picture can only be updated once every 7 days"
                 });
             }
+
+            updateData.profilePic =
+                profilePic;
+
+            updateData.lastProfileUpdate =
+                now;
+        }
+
+        if (aadhar) {
+
+            if (!validator.isNumeric(aadhar)) {
+
+                return res.status(400).json({
+                    message:
+                        "Invalid Aadhaar number!"
+                });
+            }
+
             if (aadhar.length !== 12) {
                 return res.status(400).json({
                     message:
                         "Aadhaar must be 12 digits!"
                 });
             }
-            const existingAadhar =await User.findOne({//if this aadhar belong to another student 
-                aadhar,
-                _id: { $ne: userId }
-            });
+
+            const existingAadhar =
+                await User.findOne({
+                    aadhar,
+                    _id: { $ne: userId }
+                });
 
             if (existingAadhar) {
                 return res.status(409).json({
@@ -1144,30 +1683,37 @@ const updateProfile=async (req,res)=>{
             }
             updateData.aadhar = aadhar;
         }
-        const updateUser=await User.findOneAndUpdate({_id:userId},updateData,{new:true}).select(
-            'username email phoneNumber profilePic aadhar'
-        )
-        if(!updateUser){
-            return res.status(404).json({
-                message:"User not found!"
-            })
-        }
-        res.status(200).json({
-            message:"Profile updated successfully!",
-            user:updateUser
-        })
-    }catch(err){
-        res.status(500).json({
-            message:err.message
-        })
+
+        const updatedUser =
+            await User.findByIdAndUpdate(
+
+                userId,
+
+                updateData,
+                {
+                    new: true,
+                    runValidators: true
+                }
+            ).select("username email phoneNumber profilePic aadhar");
+        return res.status(200).json({
+            message:
+                "Profile updated successfully!",
+
+            user: updatedUser
+        });
+    } catch (err) {
+
+        return res.status(500).json({
+            message: err.message
+        });
     }
-}
+};
 //update Profile as admin
 const updateByAdmin=async (req,res)=>{
     try{
         const {id}=req.params;
-        const {username,email,phoneNumber,aadhar,roomNo,
-            course,year,guardianName,guardianPhone}=req.body;
+        const {username,email,phoneNumber,aadhar,address,
+            course,collegeName,year,guardianName,guardianPhone}=req.body;
 
         const updateUserData = {};
         const updateStudentData = {};
@@ -1200,12 +1746,23 @@ const updateByAdmin=async (req,res)=>{
             }
             updateUserData.aadhar =aadhar;
         }
-        if (roomNo) updateStudentData.roomNo = roomNo;
         if (course) updateStudentData.course = course;
+        if(collegeName)updateStudentData.collegeName=collegeName;
         if (year) updateStudentData.year = year;
         if (guardianName) updateStudentData.guardianName =guardianName;
         if (guardianPhone)updateStudentData.guardianPhone=guardianPhone;
-            
+         // address validation
+        if(address){
+            if (!address ||!address.city ||!address.state || !address.pincode) {
+                return res.status(400).json({
+                    message:
+                        "Complete address is required!"
+                });
+            }
+            updateUserData.address=address;
+        }
+        
+
         const updatedUser=await User.findOneAndUpdate({_id:id},updateUserData,{new:true}).select(
             'username email phoneNumber aadhar'
         )
@@ -1338,35 +1895,65 @@ const getMyFees = async (req, res) => {
 const getPendingFees = async (req, res) => {
 
     try {
+
+        const page =parseInt(req.query.page) || 1;
+        const limit =parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const totalPendingFees =await Fee.countDocuments({
+            installments: {
+                    $elemMatch: {
+                        status: "pending"
+                    }
+                } 
+            });
+
         const pendingFees = await Fee.find({
             installments: {
-                $elemMatch: {
-                    status: "pending"
-                }
+                $elemMatch: {status: "pending"}
             }
-
         })
         .populate({
-            path:"studentId",
-            populate:{
-                path:"userId",
-                select:"username email phoneNumber"
+            path: "studentId",
+            populate: {
+                path: "userId",
+                select:
+                    "username email phoneNumber"
             }
-        });
+        })
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 });
 
-        if(pendingFees.length === 0){
+        if (pendingFees.length === 0) {
+
             return res.status(404).json({
-                message:"No pending fees!"
+                message: "No pending fees!"
             });
         }
 
-        res.status(200).json({
+        const totalPages =
+            Math.ceil(totalPendingFees / limit);
+
+        return res.status(200).json({
+
+            totalPendingFees,
+
+            totalPages,
+
+            currentPage: page,
+
+            hasNextPage: page < totalPages,
+
+            hasPrevPage: page > 1,
+
             pendingFees
+
         });
 
     } catch (err) {
 
-        res.status(500).json({
+        return res.status(500).json({
             message: err.message
         });
 
@@ -1384,7 +1971,26 @@ const payFee = async (req, res) => {
                 message:"Fee structure not found!"
             });
         }
-
+        // fee already fully paid
+        if (fee.totalPaid >= fee.totalAmount) {
+            return res.status(400).json({
+                message: "Fee already fully paid!"
+            });
+        }
+        const student = await Student.findOne({
+            userId: req.result._id
+        });
+        
+        if(!student){
+            return res.status(404).json({
+                message:"Student not found!"
+            })
+        }
+        if(fee.studentId.toString() !== student._id.toString()){
+            return res.status(403).json({
+                message:"Unauthorized access!"
+            });
+        }
         // find installment
         const installment = fee.installments.id(installmentId);
 
@@ -1404,7 +2010,7 @@ const payFee = async (req, res) => {
         // update installment
         installment.status = "paid";
         installment.paidAt = new Date();
-
+        fee.totalPaid += installment.amount;
         await fee.save();
 
         res.status(200).json({
@@ -1506,13 +2112,29 @@ const updateRoom=async (req,res)=>{
 //get all rooms(admin)
 const getAllRooms=async (req,res)=>{
     try{
-        const rooms=await Room.find().sort({createdAt:-1});
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const totalRooms=await Room.countDocuments();
+        const rooms=await Room.find().skip(skip).limit(limit)
+        .sort({createdAt:-1});
         if(rooms.length===0){
             return res.status(404).json({
                 message:"no room found!"
             })
         }
+        const totalPages=Math.ceil(totalRooms/limit);
         res.status(200).json({
+            totalRooms,
+            totalPages,
+
+            currentPage: page,
+
+            hasNextPage: page < totalPages,
+
+            hasPrevPage: page > 1,
+
             rooms
         })
     }catch(err){
@@ -1530,7 +2152,11 @@ const getRoomByNumber=async (req,res)=>{
                 message:"room number is not provided!"
             })
         }
-        const room=await Room.findOne({roomNo});
+        const room = await Room.findOne({roomNo})
+        .populate({
+            path:"student",
+            select:"username email phoneNumber address"
+        });
         if(!room){
             return res.status(404).json({
                 message:"No room found with this room number!"
@@ -1658,48 +2284,139 @@ const shiftStudentRoom = async (req, res) => {
     }
 };
 //search Student
-const searchStudent=async (req,res)=>{
-    try{
-        const {query}=req.query;
-        const currentUser=req.result._id;
+const searchStudent = async (req, res) => {
 
+    try {
+        const { query } = req.query;
+        const currentUser = req.result._id;
         if (!query || query.trim() === "") {
-            return res.status(400).json({ message: "Search query is required!" });
+            return res.status(400).json({
+                message: "Search query is required!"
+            });
+        }
+        const page =parseInt(req.query.page) || 1; 
+        const limit =parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        // search only students
+        const users = await User.find({
+            role: "student",
+            isResident: true,
+            _id: { $ne: currentUser },
+
+            $or: [
+
+                {
+                    username: {
+                        $regex: query,
+                        $options: "i"
+                    }
+                },
+
+                {
+                    phoneNumber: {
+                        $regex: query,
+                        $options: "i"
+                    }
+                },
+
+                {
+                    email: {
+                        $regex: query,
+                        $options: "i"
+                    }
+                }
+
+            ]
+
+        }).select(
+            "username phoneNumber email"
+        ).skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 });
+        
+        if (users.length === 0) {
+            return res.status(404).json({
+                message: "No student found!"
+            });
         }
 
-        const users = await User.find({
-            $or: [
-                { username: { $regex: query, $options: 'i' } },
-                { phoneNumber: { $regex: query, $options: 'i' } }
-            ],
-            _id: { $ne: currentUser } // exclude self
-        }).select('username phoneNumber email ');
-
-        const finalUser=await Promise.all(// this will attach roomNo
-            users.map(async(user)=>{
-                const student=await Student.findOne({
-                    userId:user._id
-                }).select('roomNo')
+        // get room numbers
+        const finalUsers = await Promise.all(
+            users.map(async (user) => {
+                const student =await Student.findOne({
+                        userId: user._id
+                    }).select("roomNo"); 
                 return {
-                    _id:user._id,
-                    username:user.username,
+                    _id: user._id,
+                    username: user.username,
                     phoneNumber:user.phoneNumber,
-                    email:user.email,
-                    roomNo:student? student.roomNo :null
-                }
+                    email: user.email,
+                    roomNo:student?.roomNo || null
+                };
             })
-        )
+        );
 
-        res.status(200).json({user:finalUser});
-    }catch(err){
-        res.status(500).json({
-            message:err.message
-        })
+        // total students count
+        const totalStudents =
+            await User.countDocuments({
+                role: "student",
+                isResident: true,
+                _id: { $ne: currentUser },
+                $or: [
+                    {
+                        username: {
+                            $regex: query,
+                            $options: "i"
+                        }
+                    },
+
+                    {
+                        phoneNumber: {
+                            $regex: query,
+                            $options: "i"
+                        }
+                    },
+
+                    {
+                        email: {
+                            $regex: query,
+                            $options: "i"
+                        }
+                    }
+
+                ]
+            });
+
+        const totalPages =Math.ceil(totalStudents / limit);
+
+        return res.status(200).json({
+
+            totalStudents,
+
+            totalPages,
+
+            currentPage: page,
+
+            hasNextPage: page < totalPages,
+
+            hasPrevPage: page > 1,
+
+            users: finalUsers
+
+        });
+
+    } catch (err) {
+
+        return res.status(500).json({
+            message: err.message
+        });
+
     }
-}
+};
 const applyLeave=async (req,res)=>{
     try{
-        const {userId}=req.params;
+        const userId=req.result._id;
 
         if(!userId){
             return res.status(404).json({
@@ -1737,8 +2454,13 @@ const returnFromLeave = async (req, res) => {
 
     try {
 
-        const { userId } = req.params;
-
+        const userId = req.result._id;
+        
+        if(!userId){
+            return res.status(404).json({
+                message:"user id not found"
+            })
+        }
         const student = await Student.findOne({
             userId
         });
@@ -1775,28 +2497,61 @@ const returnFromLeave = async (req, res) => {
     }
 };
 //number of students on leave
-const studentsOnLeave=async (req,res)=>{
-    try{
-        const students=await Student.find({onLeave:true})
-            .populate(
-                "userId",
-                "username email phoneNumber";
-            );
-        if(students.length===0){
+const studentsOnLeave = async (req, res) => {
+
+    try {
+
+        const page =parseInt(req.query.page) || 1;
+        const limit =parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        // total students on leave
+        const totalStudentsOnLeave =await Student.countDocuments({onLeave: true});
+            
+        const students = await Student.find({onLeave: true})
+        .populate(
+            "userId",
+            "username email phoneNumber"
+        )
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 });
+
+        if (students.length === 0) {
+
             return res.status(404).json({
-                message:"No student is on leave"
-            })
+                message: "No student is on leave"
+            });
         }
-        res.status(200).json({
-            noOfStudentsOnLeave:students.length,
+
+        const totalPages =Math.ceil( totalStudentsOnLeave / limit);
+
+        return res.status(200).json({
+
+            totalStudentsOnLeave,
+
+            totalPages,
+
+            currentPage: page,
+
+            hasNextPage: page < totalPages,
+
+            hasPrevPage: page > 1,
+
             students
-        })
-    }catch(err){
-        res.status(500).json({
-            message:err.message
-        })
+
+        });
+
+    } catch (err) {
+
+        return res.status(500).json({
+            message: err.message
+        });
+
     }
-}
+};
+
+//Bus timing referesh token ,resend otp , receipt , kyc ,create notification ,my notification , mark notification
 
 module.exports={registerAdmin,registerStudent,loginAdmin,loginStudent,searchStudent,
     isSpace,createMenu,getMenu,getMenuByDay,updateMessMenu,deleteMenu,fileComplaint,deleteComplaint,
