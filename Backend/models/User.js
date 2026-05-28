@@ -48,7 +48,9 @@ const userSchema = new Schema({
         type:String,
         default:""
     },
-
+    lastProfileUpdate:{
+        type:Date
+    },
     aadhar:{
         type:String,
         required:true,
@@ -61,6 +63,29 @@ const userSchema = new Schema({
     isResident:{
         type:Boolean,
         default:false
+    },
+    address: {
+        village: {
+            type: String,
+            trim: true
+        },
+        city: {
+            type: String,
+            trim: true
+        },
+        state: {
+            type: String,
+            trim: true
+        },
+        pincode: {
+            type: String,
+            trim: true
+        },
+        country: {
+            type: String,
+            default: "India",
+            trim: true
+        }
     }
 
 },{

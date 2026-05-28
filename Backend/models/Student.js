@@ -18,6 +18,12 @@ const studentSchema=new Schema({
         required:true,
         trim:true
     },
+    collegeName:{
+        type:String,
+        required:true,
+        trim:true,
+        maxlength:70
+    },
     year:{
         type:String,
         enum:['1','2','3','4','5'],
