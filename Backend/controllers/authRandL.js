@@ -10,6 +10,8 @@ const validateAdmin=require('../middlewares/validateAdmin');
 const validateStudent=require('../middlewares/validateStudent');
 const Fee = require('../models/Fee');
 const validator = require("validator");
+const validateBus = require('../utils/validateBus');
+const KYC = require('../models/KYC');
 
 
 // otp generator
@@ -81,6 +83,72 @@ const verifyOTP = async (req, res) => {
     } catch (err) {
 
         res.status(500).json({
+            message: err.message
+        });
+
+    }
+};
+//resend otp
+const resendOTP = async (req, res) => {
+
+    try {
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({
+                message: "Email is required!"
+            });
+        }
+
+        const normalizedEmail =email.trim().toLowerCase();
+
+            
+        const user = await User.findOne({ email: normalizedEmail});
+
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found!"
+            });
+        }
+
+        // Prevent spam requests
+        if (user.otpExpiry &&user.otpExpiry >Date.now() + 4 * 60 * 1000) {
+            return res.status(400).json({
+                message:
+                    "Please wait before requesting another OTP"
+            });
+        }
+
+        const otp = generateOTP();
+
+        user.emailOTP = otp;
+        //user.mobileOTP = otp;
+        user.otpExpiry =Date.now() + 5 * 60 * 1000;    
+
+        await user.save();
+        await sendMail(
+            user.email,
+            "Hostel OTP",
+            `
+            <h2>Hostel Management System</h2>
+
+            <p>Your OTP is:</p>
+
+            <h1>${otp}</h1>
+
+            <p>
+                OTP valid for 5 minutes.
+            </p>
+            `
+        );
+
+        return res.status(200).json({
+            message:
+                "OTP resent successfully!"
+        });
+
+    } catch (err) {
+
+        return res.status(500).json({
             message: err.message
         });
 
@@ -748,8 +816,13 @@ const getStudentByCollege=async (req,res)=>{
             });
         }
 
-        const totalPages =
-            Math.ceil(totalStudents / limit);
+        const totalPages =Math.ceil(totalStudents / limit);
+
+        if(page > totalPages && students > 0){
+            return res.status(400).json({
+                message: "Page does not exist"
+            });
+        }    
 
         return res.status(200).json({
 
@@ -936,6 +1009,12 @@ const getMenu=async (req,res)=>{
             })
         }
         const totalPages=Math.ceil(totalMenus / limit);
+
+        if(page > totalPages && totalMenus > 0){
+            return res.status(400).json({
+                message: "Page does not exist"
+            });
+        }
         res.status(200).json({
             totalMenus,
             totalPages,
@@ -1212,6 +1291,13 @@ const myComplaints = async (req, res) => {
 
         }
         const totalPages=Math.ceil(totalComplaints/limit);
+
+        if(page > totalPages && totalComplaints> 0){
+            return res.status(400).json({
+                message: "Page does not exist"
+            });
+        }
+
         res.status(200).json({
             totalComplaints,
             totalPages,
@@ -1306,6 +1392,13 @@ const viewComplaint=async (req,res)=>{
         }
         
         const totalPages=Math.ceil(totalComplaints/limit);
+
+        if(page > totalPages && totalComplaints > 0){
+            return res.status(400).json({
+                message: "Page does not exist"
+            });
+        }
+
         res.status(200).json({
             totalPages,
             totalComplaints,
@@ -1346,6 +1439,13 @@ const viewRoomComplaint=async (req,res)=>{
         }
 
         const totalPages=Math.ceil(totalComplaints/limit);
+
+        if(page > totalPages && totalComplaints > 0){
+            return res.status(400).json({
+                message: "Page does not exist"
+            });
+        }
+
         res.status(200).json({
             totalPages,
 
@@ -1368,17 +1468,14 @@ const viewComplaintByStatus = async (req, res) => {
 
     try {
 
-        const page =
-            parseInt(req.query.page) || 1;
-
-        const limit =
-            parseInt(req.query.limit) || 10;
+        const page =parseInt(req.query.page) || 1;
+            
+        const limit =parseInt(req.query.limit) || 10;
 
         const skip = (page - 1) * limit;
 
         // total complaints
-        const totalComplaints =
-            await Complaint.countDocuments();
+        const totalComplaints =await Complaint.countDocuments();
 
         const complaints = await Complaint.aggregate([
 
@@ -1445,8 +1542,13 @@ const viewComplaintByStatus = async (req, res) => {
             });
         }
 
-        const totalPages =
-            Math.ceil(totalComplaints / limit);
+        const totalPages =Math.ceil(totalComplaints / limit);
+
+        if(page > totalPages && totalComplaints > 0){
+            return res.status(400).json({
+                message: "Page does not exist"
+            });
+        }
 
         return res.status(200).json({
 
@@ -1932,8 +2034,12 @@ const getPendingFees = async (req, res) => {
             });
         }
 
-        const totalPages =
-            Math.ceil(totalPendingFees / limit);
+        const totalPages =Math.ceil(totalPendingFees / limit);
+        if(page > totalPages && totalPendingFees > 0){
+            return res.status(400).json({
+                message: "Page does not exist"
+            });
+        }
 
         return res.status(200).json({
 
@@ -2125,6 +2231,12 @@ const getAllRooms=async (req,res)=>{
             })
         }
         const totalPages=Math.ceil(totalRooms/limit);
+
+        if(page > totalPages && totalRooms > 0){
+            return res.status(400).json({
+                message: "Page does not exist"
+            });
+        }
         res.status(200).json({
             totalRooms,
             totalPages,
@@ -2389,7 +2501,8 @@ const searchStudent = async (req, res) => {
             });
 
         const totalPages =Math.ceil(totalStudents / limit);
-
+        
+        
         return res.status(200).json({
 
             totalStudents,
@@ -2526,6 +2639,11 @@ const studentsOnLeave = async (req, res) => {
 
         const totalPages =Math.ceil( totalStudentsOnLeave / limit);
 
+        if(page > totalPages && totalStudentsOnLeave > 0){
+            return res.status(400).json({
+                message: "Page does not exist"
+            });
+        }
         return res.status(200).json({
 
             totalStudentsOnLeave,
@@ -2551,7 +2669,344 @@ const studentsOnLeave = async (req, res) => {
     }
 };
 
-//Bus timing referesh token ,resend otp , receipt , kyc ,create notification ,my notification , mark notification
+// bus schedule
+
+//create bus schedule
+const createBus=async (req,res)=>{
+    try{
+        const adminId=req.result._id;
+        if(!adminId){
+            return res.status(401).json({
+               message:"admin Id not found"
+            })
+        }
+
+        const {busNo,route,hostelToCollege,collegeToHostel}=req.body;
+        validateBus(req.body);
+        const normalizedBusNo=busNo.trim().toUpperCase();
+        route:route.trim();
+        const existingBus = await Bus.findOne({ busNo :normalizedBusNo});
+
+        if (existingBus) {
+            return res.status(409).json({
+                message: "Bus already exists!"
+            });
+        }
+        const bus=await Bus.create({busNo:normalizedBusNo,route,hostelToCollege,collegeToHostel});
+        res.status(201).json({
+            message:"Bus schedule created successfully",
+            bus
+        })
+        
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        })
+    }
+}
+//update bus schedule
+const updateBus=async (req,res)=>{
+    try{
+        const adminId=req.result._id;
+        if(!adminId){
+            return res.status(401).json({
+                message:"admin Id is missing"
+            })
+        }
+        const {busId}=req.params;
+        if(!busId){
+            return res.status(400).json({
+                message:"Id not found"
+            })
+        }
+
+        const updateData={};
+        const {busNo,route,hostelToCollege,collegeToHostel}=req.body;
+
+        if(busNo){
+            updateBus.busNo=busNo.trim().toUpperCase();
+        }
+        if(route)updateData.route=route;
+        if(hostelToCollege)updateData.hostelToCollege=hostelToCollege;
+        if(collegeToHostel)updateData.collegeToHostel=collegeToHostel;
+        
+        const existingBus = await Bus.findOne({
+            busNo: updateData.busNo,
+            _id: { $ne: busId }
+        });
+        const updateBus=await Bus.findByIdAndUpdate(busId,updateData,{new:true});
+
+        if(!updateBus){
+            return res.status(404).json({
+                message:"Bus not found "
+            })
+        }
+        res.status(200).json({
+            message:"bus schedule updated ",
+            bus:updateBus
+        })
+        
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        })
+    }
+}
+//view Bus Schedule
+const viewBus=async (req,res)=>{
+    try{
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const totalBuses=await Bus.countDocuments();
+        const busSchedule=await Bus.find().skip(skip).limit(limit)
+        .sort({createdAt:-1});
+        if(busSchedule.length===0){
+            return res.status(404).json({
+                message:"Bus schdule not found"
+            })
+        }
+        
+        const totalPages=Math.ceil(totalBuses/limit);
+
+        if(page > totalPages && totalKyc > 0){
+            return res.status(400).json({
+                message: "Page does not exist"
+            });
+        }
+
+        res.status(200).json({
+            totalBuses,
+            totalPages,
+
+            currentPage: page,
+
+            hasNextPage: page < totalPages,
+
+            hasPrevPage: page > 1,
+
+            busSchedule
+        })
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        })
+    }
+}
+//delete bus
+const deleteBus=async (req,res)=>{
+    try{
+        const adminId = req.result._id;
+
+        if (!adminId) {
+            return res.status(401).json({
+                message: "Unauthorized"
+            });
+        }
+        const {busId}=req.params;
+        if(!busId){
+            return res.status(400).json({
+                message:"bus id not found"
+            })
+        }
+
+        const bus=await Bus.findByIdAndDelete(busId);
+        if(!bus){
+            return res.status(404).json({
+                message:"Bus not found"
+            })
+        }
+        res.status(200).json({
+            message:"Bus schedule deleted successfully",
+            bus
+        })
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        })
+    }
+}
+//KYC
+
+//submit kyc
+const submitKyc=async (req,res)=>{
+    try{
+        const userId=req.params._id;
+        if(!userId){
+            return res.status(400).json({
+                message:"User id not found"
+            })
+        }
+
+        const {aadharFront,aadharBack,selfie}=req.body;
+        if(!aadharFront || !aadharBack || !selfie){
+            return res.status(400).json({
+                message:"Required fields are missing"
+            })
+        }
+
+        const alreadyExist=await KYC.find({userId});
+        if(alreadyExist){
+            return res.status(400).json({
+                message:"KYC already submitted"
+            })
+        }
+
+        const kyc=await KYC.create({
+            userId,
+            aadharFront,aadharBack,
+            selfie
+        });
+
+        res.status(200).json({
+            message:"KYC sent successfully",
+            kyc
+        })
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        })
+    }
+}
+//get mykYC detail
+const getMyKyc=async (req,res)=>{
+    try{
+        const userId=req.params._id;
+        if(!userId){
+            return res.status(400).json({
+                message:"user id not found"
+            })
+        }
+
+        const kyc=await KYC.findOne({userId});
+        if(!kyc){
+            return res.status(404).json({
+                message:"KYC not found"
+            })
+        }
+        res.status(200).json({
+            kyc
+        })
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        })
+    }
+}
+//get all pending kyc
+const getPendingKyc=async (req,res)=>{
+    try{
+        const page=parseInt(req.query.page)||1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const totalKyc=await KYC.countDocuments({status:"pending"});
+        const kyc=await  KYC.find({status:"pending"})
+        .populate("userId",
+            "username email phoneNumber"
+        ).sort({createdAt:-1})
+        .skip(skip).limit(limit)
+        
+
+        if(kyc.length===0){
+            return res.status(404).json({
+                message:"No pending kyc found"
+            })
+        }
+        const totalPages=Math.ceil(totalKyc/limit);
+        
+        if(page > totalPages && totalKyc > 0){
+            return res.status(400).json({
+                message: "Page does not exist"
+            });
+        }
+        res.status(200).json({
+            totalKyc,
+            totalPages,
+            currentPage: page,
+
+            hasNextPage: page < totalPages,
+
+            hasPrevPage: page > 1,
+
+            kyc
+        })
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        })
+    }
+}
+//Approve kyc
+const approveKyc=async(req,res)=>{
+    try{
+
+        const {_id}=req.params;
+
+        const kyc=await KYC.findById(_id);
+
+        if(!kyc){
+            return res.status(404).json({
+                message:"KYC not found!"
+            });
+        }
+
+        kyc.status="approved";
+
+        kyc.verifiedBy=req.result._id;
+
+        kyc.verifiedAt=new Date();
+        await kyc.save();
+
+        res.status(200).json({
+            message:"KYC approved!",
+            kyc
+        });
+
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        });
+    }
+};
+//Reject kyc
+const rejectKYC=async(req,res)=>{
+    try{
+
+        const {_id}=req.params;
+        const {reason}=req.body;
+        const kyc=await KYC.findById(_id);
+
+        if(!kyc){
+            return res.status(404).json({
+                message:"KYC not found!"
+            });
+        }
+
+        kyc.status="rejected";
+
+        kyc.rejectionReason=
+            reason || "Documents mismatch";
+
+        kyc.verifiedBy=req.result._id;
+
+        kyc.verifiedAt=new Date();
+
+        await kyc.save();
+
+        res.status(200).json({
+            message:"KYC rejected!",
+            kyc
+        });
+
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        });
+    }
+};
+//help ,receipt  ,create notification ,my notification , mark notification
 
 module.exports={registerAdmin,registerStudent,loginAdmin,loginStudent,searchStudent,
     isSpace,createMenu,getMenu,getMenuByDay,updateMessMenu,deleteMenu,fileComplaint,deleteComplaint,
