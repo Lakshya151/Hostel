@@ -17,7 +17,7 @@ const adminMiddleware=async (req,res,next)=>{
                 message:"Access denied!"
             })
         }
-        const result=await User.findById({_id});
+        const result=await User.findById(_id);
         if(!result){
             return res.status(400).json({
                 message:"admin not found!"

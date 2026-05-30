@@ -44,7 +44,7 @@ const roomSchema = new mongoose.Schema({
 });
 
 // auto update room status
-roomSchema.pre('save', function(next) {
+roomSchema.pre('save', function () {
 
     if (this.student.length >= this.capacity) {
         this.status = "full";
@@ -52,7 +52,6 @@ roomSchema.pre('save', function(next) {
         this.status = "available";
     }
 
-    next();
 });
 
 module.exports = mongoose.model("Room", roomSchema);

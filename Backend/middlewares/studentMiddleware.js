@@ -20,10 +20,10 @@ const studentMiddleware =
         }
 
         // check blacklist
-        const isBlocked =
-            await redisClient.get(
+        const isBlocked =await redisClient.get(
                 `token:${token}`
             );
+            
 
         if (isBlocked) {
 

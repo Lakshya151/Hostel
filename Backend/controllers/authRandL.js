@@ -1,17 +1,22 @@
 const Student = require('../models/Student');
 const Room=require('../models/Room');
 const Mess=require('../models/Mess');
+const User=require('../models/User');
+const Fee = require('../models/Fee');
+const KYCmodel = require('../models/KYC');
+const Announcement=require('../models/Announcement');
+const Outing = require("../models/Outing");
+const mongoose=require('mongoose');
+const Bus=require('../models/Bus');
+const Complaint = require('../models/Complaint');
 const sendMail=require('../utils/sendMail');
 const jwt = require('jsonwebtoken');
 const redisClient=require('../config/redis');
-const User=require('../models/User');
-const Complaint = require('../models/Complaint');
 const validateAdmin=require('../middlewares/validateAdmin');
 const validateStudent=require('../middlewares/validateStudent');
-const Fee = require('../models/Fee');
 const validator = require("validator");
 const validateBus = require('../utils/validateBus');
-const KYC = require('../models/KYC');
+
 
 
 // otp generator
@@ -54,7 +59,7 @@ const verifyOTP = async (req, res) => {
         // CLEAR OTP
         user.emailOTP = null;
         user.mobileOTP = null;
-        user.otpExpiry = null;
+        user.otpExpiry = Date.now() + 5 * 60 * 1000;
 
         await user.save();
 
@@ -111,7 +116,7 @@ const resendOTP = async (req, res) => {
         }
 
         // Prevent spam requests
-        if (user.otpExpiry &&user.otpExpiry >Date.now() + 4 * 60 * 1000) {
+        if (user.otpExpiry &&user.otpExpiry >Date.now()) {
             return res.status(400).json({
                 message:
                     "Please wait before requesting another OTP"
@@ -641,7 +646,7 @@ const logout=async(req,res)=>{
             process.env.JWT_KEY
         );
         await redisClient.set(`token:${token}`,"Blocked",
-            "EX", 60 * 60 * 24 * 7
+            {EX: 60 * 60 * 24 * 7}
         );
          res.clearCookie("token");
         res.status(200).json({
@@ -749,9 +754,10 @@ const allResidentStudents=async (req,res)=>{
                 isResident:true,
                 role:"student"
             },select:"username email phoneNumber profilePic aadhar"
-        }).skip(skip)
-        .limit(limit)
-        .sort({createdAt:-1});
+        }).sort({createdAt:-1})
+        .skip(skip)
+        .limit(limit);
+        
 
         // remove null users
         const activeStudents = students.filter(
@@ -805,9 +811,9 @@ const getStudentByCollege=async (req,res)=>{
         }).populate(
                 "userId",
                 "username email phoneNumber profilePic"
-            ).skip(skip)
-            .limit(limit)
-            .sort({ createdAt: -1 });
+            ).sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
         if (students.length === 0) {
 
             return res.status(404).json({
@@ -885,9 +891,10 @@ const pastStudents=async (req,res)=>{
                 isResident:false,
                 role:"student"
             },select:"username email phoneNumber profilePic aadhar"
-        }).skip(skip)
+        }).sort({createdAt:-1})
+        .skip(skip)
         .limit(limit)
-        .sort({createdAt:-1})
+        
 
         // remove null users
         const pastStudents = students.filter(
@@ -1001,8 +1008,9 @@ const getMenu=async (req,res)=>{
         const skip = (page - 1) * limit;
          
         const totalMenus = await Mess.countDocuments();
-        const menu=await Mess.find().skip(skip).limit(limit)
-        .sort({createdAt:-1});
+        const menu=await Mess.find().sort({createdAt:-1})
+        .skip(skip).limit(limit)
+        
         if(menu.length===0){
             return res.status(404).json({
                 message:"menu will be available soon!"
@@ -1279,8 +1287,9 @@ const myComplaints = async (req, res) => {
         const complaints =
             await Complaint.find({
                 userId
-            }).skip(skip).limit(limit)
-            .sort({ createdAt: -1 });
+            }) .sort({ createdAt: -1 })
+            .skip(skip).limit(limit)
+           
 
         if (complaints.length === 0) {
 
@@ -1345,36 +1354,63 @@ const deleteComplaint=async (req,res)=>{
     }
 }
 //resolve complaint (user)
-const resolveComplaint=async (req,res)=>{
-    try{
-        const {_id}=req.params;//complaint id
-        if(!_id){
+const resolveComplaint = async (req, res) => {
+    try {
+        const { _id } = req.params;
+        if (!_id) {
             return res.status(400).json({
-                message:"complaint Id missing!"
-            })
+                message: "Complaint id is required"
+            });
         }
-        const complaint=await Complaint.findById(_id);
 
-        if(!complaint){
-            return res.status(404).json({
-                message:"complaint doesn't exist for this room"
-            })
+        if (!mongoose.Types.ObjectId.isValid(_id)) {
+            return res.status(400).json({
+                message: "Invalid complaint id"
+            });
         }
-        complaint.status="resolved";
+
+        const complaint = await Complaint.findById(_id);
+
+        if (!complaint) {
+            return res.status(404).json({
+                message: "Complaint not found"
+            });
+        }
+
+        const user = req.result;
+
+        if (
+            user.role !== "admin" &&
+            complaint.userId.toString() !== user._id.toString()
+        ) {
+            return res.status(403).json({
+                message: "Not authorized"
+            });
+        }
+
+        if (complaint.status === "resolved") {
+            return res.status(400).json({
+                message: "Complaint already resolved"
+            });
+        }
+
+        complaint.status = "resolved";
+
         await complaint.save();
 
         res.status(200).json({
-            complaint,
-            message:"complaint resolved!"
-        })
+            message: "Complaint resolved successfully",
+            complaint
+        });
 
-        
-    }catch(err){
+    } catch (err) {
+
         res.status(500).json({
-            message:err.message
-        })
+            message: err.message
+        });
+
     }
-}
+};
 //view all complaint(Admin)
 const viewComplaint=async (req,res)=>{
     try{
@@ -1383,8 +1419,9 @@ const viewComplaint=async (req,res)=>{
         const skip = (page - 1) * limit;
 
         const totalComplaints=await Complaint.countDocuments();
-        const complaints=await Complaint.find().skip(skip).limit(limit)
-        .sort({createdAt:-1});
+        const complaints=await Complaint.find().sort({createdAt:-1})
+        .skip(skip).limit(limit)
+        
         if(complaints.length===0){
             return res.status(404).json({
                 message:"No complant available!"
@@ -1430,8 +1467,9 @@ const viewRoomComplaint=async (req,res)=>{
         const skip = (page - 1) * limit;
 
         const totalComplaints=await Complaint.countDocuments({roomNo});
-        const complaints=await Complaint.find({roomNo}).skip(skip).limit(limit)
-        .sort({createdAt:-1});
+        const complaints=await Complaint.find({roomNo}).sort({createdAt:-1})
+        .skip(skip).limit(limit)
+        
         if(complaints.length===0){
             return res.status(404).json({
                 message:"no complaint found!"
@@ -1678,19 +1716,14 @@ const adminProfile=async (req,res)=>{
     }
 }
 //update  profile 
-const updateProfile = async (req, res) => {
+const updateMyProfile = async (req, res) => {
 
     try {
 
         const userId = req.result._id;
 
         const {
-            username,
-            email,
-            phoneNumber,
-            profilePic,
-            aadhar
-        } = req.body;
+            username,email,phoneNumber,profilePic,aadhar} = req.body;
 
         // find user first
         const user = await User.findById(userId);
@@ -1705,18 +1738,15 @@ const updateProfile = async (req, res) => {
         const updateData = {};
 
         if (username) {
-            updateData.username =
-                username.trim();
+            updateData.username =username.trim();
         }
 
         if (email) {
-            updateData.email =
-                email.trim().toLowerCase();
+            updateData.email =email.trim().toLowerCase();
         }
 
         if (phoneNumber) {
-            updateData.phoneNumber =
-                phoneNumber;
+            updateData.phoneNumber =phoneNumber;
         }
 
         // profile picture cooldown
@@ -1731,36 +1761,25 @@ const updateProfile = async (req, res) => {
 
             const now = new Date();
 
-            const lastUpdate =
-                user.lastProfileUpdate;
+            const lastUpdate =user.lastProfileUpdate;
 
             // 7 day cooldown
-            if (
-                lastUpdate &&
-                now - lastUpdate <
-                7 * 24 * 60 * 60 * 1000
-            ) {
-
+            if (lastUpdate && now - lastUpdate <7 * 24 * 60 * 60 * 1000) {
                 return res.status(400).json({
                     message:
                         "Profile picture can only be updated once every 7 days"
                 });
             }
 
-            updateData.profilePic =
-                profilePic;
+            updateData.profilePic =profilePic;
 
-            updateData.lastProfileUpdate =
-                now;
+            updateData.lastProfileUpdate =now;
         }
 
         if (aadhar) {
-
             if (!validator.isNumeric(aadhar)) {
-
                 return res.status(400).json({
-                    message:
-                        "Invalid Aadhaar number!"
+                    message:"Invalid Aadhaar number!"
                 });
             }
 
@@ -1771,26 +1790,32 @@ const updateProfile = async (req, res) => {
                 });
             }
 
-            const existingAadhar =
-                await User.findOne({
+            const existingAadhar =await User.findOne({
                     aadhar,
                     _id: { $ne: userId }
                 });
+                
 
             if (existingAadhar) {
                 return res.status(409).json({
-                    message:
-                        "Aadhaar already exists!"
+                    message:"Aadhaar already exists!"
                 });
             }
             updateData.aadhar = aadhar;
         }
-
+        const existingEmail = await User.findOne({
+            email: updateData.email,
+            _id: { $ne: userId }
+        });
+        
+        if(existingEmail){
+            return res.status(409).json({
+                message:"Email already exists"
+            })
+        }
         const updatedUser =
             await User.findByIdAndUpdate(
-
                 userId,
-
                 updateData,
                 {
                     new: true,
@@ -1811,7 +1836,7 @@ const updateProfile = async (req, res) => {
     }
 };
 //update Profile as admin
-const updateByAdmin=async (req,res)=>{
+const updateProfileByAdmin=async (req,res)=>{
     try{
         const {id}=req.params;
         const {username,email,phoneNumber,aadhar,address,
@@ -1823,8 +1848,19 @@ const updateByAdmin=async (req,res)=>{
         if(username){
             updateUserData.username =username.trim();
         }
-        if(email){
-            updateUserData.email=email.trim().toLowerCase();
+        if (email) {
+            updateUserData.email = email.trim().toLowerCase();
+
+            const existingEmail = await User.findOne({
+                email: updateUserData.email,
+                _id: { $ne: id }
+            });
+
+            if (existingEmail) {
+                return res.status(409).json({
+                    message: "Email already exists"
+                });
+            }
         }
         if(phoneNumber){
             updateUserData.phoneNumber=phoneNumber
@@ -1868,10 +1904,16 @@ const updateByAdmin=async (req,res)=>{
         const updatedUser=await User.findOneAndUpdate({_id:id},updateUserData,{new:true}).select(
             'username email phoneNumber aadhar'
         )
+        if(!updatedUser){
+            return res.status(404).json({
+                message:"User not found!"
+            })
+        }
+
         const updatedStudent =await Student.findOneAndUpdate(
                 { userId: id },updateStudentData,{ new: true }
             );
-        if(!updatedUser){
+        if(!updatedStudent){
             return res.status(404).json({
                 message:"User not found!"
             })
@@ -2022,10 +2064,10 @@ const getPendingFees = async (req, res) => {
                 select:
                     "username email phoneNumber"
             }
-        })
+        }).sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .sort({ createdAt: -1 });
+        
 
         if (pendingFees.length === 0) {
 
@@ -2140,6 +2182,12 @@ const payFee = async (req, res) => {
 //create room(admin)
 const createRoom=async (req,res)=>{
     try{
+        const adminId=req.result._id;
+        if(!adminId){
+            return res.status(400).json({
+                message:"admin Id not found"
+            })
+        }
         const {roomNo,floor,capacity, type,isAC}=req.body;
         if(!roomNo ||!capacity){
             return res.status(400).json({
@@ -2163,10 +2211,13 @@ const createRoom=async (req,res)=>{
             room
         })
     }catch(err){
-        res.status(500).json({
-            message:err.message
-        })
-    }
+    console.error(err);
+
+    res.status(500).json({
+        message: err.message,
+        stack: err.stack
+    });
+}
 }
 //update room(admin)
 const updateRoom=async (req,res)=>{
@@ -2223,8 +2274,9 @@ const getAllRooms=async (req,res)=>{
         const skip = (page - 1) * limit;
 
         const totalRooms=await Room.countDocuments();
-        const rooms=await Room.find().skip(skip).limit(limit)
-        .sort({createdAt:-1});
+        const rooms=await Room.find().sort({createdAt:-1})
+        .skip(skip).limit(limit)
+        
         if(rooms.length===0){
             return res.status(404).json({
                 message:"no room found!"
@@ -2329,7 +2381,6 @@ const shiftStudentRoom = async (req, res) => {
             });
         }
 
-        // find student
         const student = await Student.findById(studentId);
 
         if (!student) {
@@ -2339,14 +2390,14 @@ const shiftStudentRoom = async (req, res) => {
         }
 
         // old room
-        const oldRoom = await Room.findOne({
-            roomNo: student.roomNo
-        });
+        const oldRoom = await Room.findOne({roomNo: student.roomNo});
+        if(!oldRoom){
+            return res.status(404).json({
+                message:"Current room not found"
+            });
+        }
 
-        // new room
-        const newRoom = await Room.findOne({
-            roomNo: newRoomNo
-        });
+        const newRoom = await Room.findOne({roomNo: newRoomNo});
 
         if (!newRoom) {
             return res.status(404).json({
@@ -2397,208 +2448,188 @@ const shiftStudentRoom = async (req, res) => {
 };
 //search Student
 const searchStudent = async (req, res) => {
-
     try {
         const { query } = req.query;
         const currentUser = req.result._id;
+
         if (!query || query.trim() === "") {
             return res.status(400).json({
                 message: "Search query is required!"
             });
         }
-        const page =parseInt(req.query.page) || 1; 
-        const limit =parseInt(req.query.limit) || 10;
+
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+
+        if (page < 1 || limit < 1) {
+            return res.status(400).json({
+                message: "Invalid page or limit"
+            });
+        }
+
         const skip = (page - 1) * limit;
 
-        // search only students
-        const users = await User.find({
-            role: "student",
-            isResident: true,
-            _id: { $ne: currentUser },
-
-            $or: [
-
-                {
-                    username: {
-                        $regex: query,
-                        $options: "i"
-                    }
+        const students = await Student.find()
+            .populate({
+                path: "userId",
+                match: {
+                    role: "student",
+                    isResident: true,
+                    _id: { $ne: currentUser },
+                    $or: [
+                        {
+                            username: {
+                                $regex: query,
+                                $options: "i"
+                            }
+                        },
+                        {
+                            phoneNumber: {
+                                $regex: query,
+                                $options: "i"
+                            }
+                        },
+                        {
+                            email: {
+                                $regex: query,
+                                $options: "i"
+                            }
+                        }
+                    ]
                 },
+                select:
+                    "username phoneNumber email"
+            })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
 
-                {
-                    phoneNumber: {
-                        $regex: query,
-                        $options: "i"
-                    }
-                },
+        const finalUsers = students
+            .filter(student => student.userId)
+            .map(student => ({
+                _id: student.userId._id,
+                username:student.userId.username,
+                phoneNumber:student.userId.phoneNumber,
+                email:student.userId.email,
+                roomNo: student.roomNo
+            }));
 
-                {
-                    email: {
-                        $regex: query,
-                        $options: "i"
-                    }
-                }
-
-            ]
-
-        }).select(
-            "username phoneNumber email"
-        ).skip(skip)
-        .limit(limit)
-        .sort({ createdAt: -1 });
-        
-        if (users.length === 0) {
+        if (finalUsers.length === 0) {
             return res.status(404).json({
                 message: "No student found!"
             });
         }
 
-        // get room numbers
-        const finalUsers = await Promise.all(
-            users.map(async (user) => {
-                const student =await Student.findOne({
-                        userId: user._id
-                    }).select("roomNo"); 
-                return {
-                    _id: user._id,
-                    username: user.username,
-                    phoneNumber:user.phoneNumber,
-                    email: user.email,
-                    roomNo:student?.roomNo || null
-                };
-            })
-        );
-
-        // total students count
-        const totalStudents =
-            await User.countDocuments({
+        const totalStudents =await User.countDocuments({
                 role: "student",
                 isResident: true,
                 _id: { $ne: currentUser },
                 $or: [
                     {
-                        username: {
-                            $regex: query,
-                            $options: "i"
-                        }
+                        username: {$regex: query,$options: "i"}
                     },
-
-                    {
-                        phoneNumber: {
+                    { phoneNumber: {
                             $regex: query,
                             $options: "i"
-                        }
+                        } 
                     },
-
-                    {
-                        email: {
+                    { email: {
                             $regex: query,
                             $options: "i"
                         }
+                        
                     }
-
                 ]
             });
-
         const totalPages =Math.ceil(totalStudents / limit);
+            
+        res.status(200).json({
+                    totalStudents,
+                    totalPages,
+                    currentPage: page,
+                    hasNextPage: page < totalPages,
+                    hasPrevPage: page > 1,
+                    users: finalUsers
+                });
         
-        
-        return res.status(200).json({
-
-            totalStudents,
-
-            totalPages,
-
-            currentPage: page,
-
-            hasNextPage: page < totalPages,
-
-            hasPrevPage: page > 1,
-
-            users: finalUsers
-
-        });
 
     } catch (err) {
 
-        return res.status(500).json({
+        res.status(500).json({
             message: err.message
         });
 
     }
 };
-const applyLeave=async (req,res)=>{
-    try{
-        const userId=req.result._id;
-
-        if(!userId){
-            return res.status(404).json({
-                message:"user Id not present"
-            })
-        }
-
-        const student=await Student.findOne({userId});
-        if(!student){
-            return res.status(404).json({
-                message:"Student not found"
-            })
-        }
-
-        if(student.onLeave){
-            return res.status(400).json({
-                message:"Student already on leave"
-            })
-        }
-
-        student.onLeave=true;
-        await student.save();
-        res.status(200).json({
-            message: "Leave applied successfully!",
-            student
-        })
-    }catch(err){
-        res.status(500).json({
-            message:err.message
-        })
-    }
-}
-// return from leave
-const returnFromLeave = async (req, res) => {
+const applyLeave = async (req, res) => {
 
     try {
-
         const userId = req.result._id;
-        
-        if(!userId){
-            return res.status(404).json({
-                message:"user id not found"
+
+        const {category,customReason,expectedReturnTime} = req.body;
+        if(!category){
+            return res.status(400).json({
+                message:"select of the reason"
             })
         }
-        const student = await Student.findOne({
-            userId
-        });
 
+        const student =await Student.findOne({userId});
+            
         if (!student) {
             return res.status(404).json({
-                message: "Student not found!"
-            });
-        }
-
-        if (!student.onLeave) {
-            return res.status(400).json({
                 message:
-                    "Student is not on leave!"
+                    "Student not found!"
             });
         }
 
-        student.onLeave = false;
+        const outing =await Outing.create({
 
-        await student.save();
+                studentId:student._id,
+                    
+                category,
+
+                customReason,
+
+                expectedReturnTime
+            });
+            
+
+        res.status(201).json({
+
+            message:"Outing informed successfully",
+            outing
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+            message: err.message
+        });
+
+    }
+};
+// return from leave
+const returnToHostel =async (req, res) => {
+    try {
+
+        const { outingId } =req.params;
+
+        const outing =await Outing.findById(outingId);
+            
+        if (!outing) {
+            return res.status(404).json({
+                message:
+                    "Outing not found!"
+            });
+        }
+
+        outing.status = "returned";
+           
+        await outing.save();
 
         res.status(200).json({
-            message:
-                "Student returned successfully!",
-            student
+            message: "Welcome back!",
+            outing
         });
 
     } catch (err) {
@@ -2619,16 +2650,20 @@ const studentsOnLeave = async (req, res) => {
         const skip = (page - 1) * limit;
 
         // total students on leave
-        const totalStudentsOnLeave =await Student.countDocuments({onLeave: true});
+        const totalStudentsOnLeave =await Outing.countDocuments({status:"out"});
             
-        const students = await Student.find({onLeave: true})
-        .populate(
-            "userId",
-            "username email phoneNumber"
-        )
+        const students = await Outing.find({status: "out"})
+            .populate({
+                path: "studentId",
+                populate: {
+                    path: "userId",
+                    select:"username email phoneNumber"
+                }
+            })
+            .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit)
-        .sort({ createdAt: -1 });
+        .limit(limit);
+        
 
         if (students.length === 0) {
 
@@ -2684,7 +2719,7 @@ const createBus=async (req,res)=>{
         const {busNo,route,hostelToCollege,collegeToHostel}=req.body;
         validateBus(req.body);
         const normalizedBusNo=busNo.trim().toUpperCase();
-        route:route.trim();
+        const normalizeRoute=route.trim();
         const existingBus = await Bus.findOne({ busNo :normalizedBusNo});
 
         if (existingBus) {
@@ -2692,7 +2727,7 @@ const createBus=async (req,res)=>{
                 message: "Bus already exists!"
             });
         }
-        const bus=await Bus.create({busNo:normalizedBusNo,route,hostelToCollege,collegeToHostel});
+        const bus=await Bus.create({busNo:normalizedBusNo,route:normalizeRoute,hostelToCollege,collegeToHostel});
         res.status(201).json({
             message:"Bus schedule created successfully",
             bus
@@ -2705,53 +2740,88 @@ const createBus=async (req,res)=>{
     }
 }
 //update bus schedule
-const updateBus=async (req,res)=>{
-    try{
-        const adminId=req.result._id;
-        if(!adminId){
+
+const updateBus = async (req, res) => {
+    try {
+
+        const adminId = req.result._id;
+        if (!adminId) {
             return res.status(401).json({
-                message:"admin Id is missing"
-            })
+                message: "Admin id is missing"
+            });
         }
-        const {busId}=req.params;
-        if(!busId){
+
+        const {busId} = req.params;
+
+        if (!busId) {
             return res.status(400).json({
-                message:"Id not found"
-            })
+                message: "Bus id is required"
+            });
         }
 
-        const updateData={};
-        const {busNo,route,hostelToCollege,collegeToHostel}=req.body;
-
-        if(busNo){
-            updateBus.busNo=busNo.trim().toUpperCase();
+        if (!mongoose.Types.ObjectId.isValid(busId)) {
+            return res.status(400).json({
+                message: "Invalid bus id"
+            });
         }
-        if(route)updateData.route=route;
-        if(hostelToCollege)updateData.hostelToCollege=hostelToCollege;
-        if(collegeToHostel)updateData.collegeToHostel=collegeToHostel;
+
+        const {busNo, route,hostelToCollege,collegeToHostel}=req.body;
+
+        const updateData = {};
+
+        if (busNo) updateData.busNo =busNo.trim().toUpperCase();
         
-        const existingBus = await Bus.findOne({
-            busNo: updateData.busNo,
-            _id: { $ne: busId }
-        });
-        const updateBus=await Bus.findByIdAndUpdate(busId,updateData,{new:true});
+        if (route) updateData.route = route.trim();
+            
+        if (hostelToCollege) updateData.hostelToCollege =hostelToCollege;            
+    
+        if (collegeToHostel) updateData.collegeToHostel =collegeToHostel;
 
-        if(!updateBus){
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({
+                message:
+                    "No fields provided for update"
+            });
+        }
+
+        if (updateData.busNo) {
+            const existingBus =await Bus.findOne({
+                    busNo: updateData.busNo,
+                    _id: { $ne: busId }
+                });
+                
+            if (existingBus) {
+                return res.status(409).json({
+                    message:
+                        "Bus number already exists"
+                });
+            }
+        }
+        const updatedBus = await Bus.findByIdAndUpdate(busId,updateData,
+                {new: true,runValidators: true}
+            );
+           
+
+        if (!updatedBus) {
             return res.status(404).json({
-                message:"Bus not found "
-            })
+                message: "Bus not found"
+            });
         }
         res.status(200).json({
-            message:"bus schedule updated ",
-            bus:updateBus
-        })
-        
-    }catch(err){
+            message:
+                "Bus schedule updated successfully",
+            bus: updatedBus
+        });
+
+    } catch (err) {
+
         res.status(500).json({
-            message:err.message
-        })
+            message: err.message
+        });
+
     }
 }
+
 //view Bus Schedule
 const viewBus=async (req,res)=>{
     try{
@@ -2760,8 +2830,9 @@ const viewBus=async (req,res)=>{
         const skip = (page - 1) * limit;
 
         const totalBuses=await Bus.countDocuments();
-        const busSchedule=await Bus.find().skip(skip).limit(limit)
-        .sort({createdAt:-1});
+        const busSchedule=await Bus.find().sort({createdAt:-1})
+        .skip(skip).limit(limit);
+        
         if(busSchedule.length===0){
             return res.status(404).json({
                 message:"Bus schdule not found"
@@ -2770,7 +2841,7 @@ const viewBus=async (req,res)=>{
         
         const totalPages=Math.ceil(totalBuses/limit);
 
-        if(page > totalPages && totalKyc > 0){
+        if(page > totalPages && totalBuses > 0){
             return res.status(400).json({
                 message: "Page does not exist"
             });
@@ -2810,7 +2881,11 @@ const deleteBus=async (req,res)=>{
                 message:"bus id not found"
             })
         }
-
+        if (!mongoose.Types.ObjectId.isValid(busId)) {
+            return res.status(400).json({
+                message: "Invalid bus id"
+            });
+        }
         const bus=await Bus.findByIdAndDelete(busId);
         if(!bus){
             return res.status(404).json({
@@ -2832,7 +2907,7 @@ const deleteBus=async (req,res)=>{
 //submit kyc
 const submitKyc=async (req,res)=>{
     try{
-        const userId=req.params._id;
+        const userId=req.result._id;
         if(!userId){
             return res.status(400).json({
                 message:"User id not found"
@@ -2846,14 +2921,14 @@ const submitKyc=async (req,res)=>{
             })
         }
 
-        const alreadyExist=await KYC.find({userId});
+        const alreadyExist=await KYCmodel.findOne({userId});
         if(alreadyExist){
             return res.status(400).json({
                 message:"KYC already submitted"
             })
         }
 
-        const kyc=await KYC.create({
+        const kyc=await KYCmodel.create({
             userId,
             aadharFront,aadharBack,
             selfie
@@ -2872,14 +2947,14 @@ const submitKyc=async (req,res)=>{
 //get mykYC detail
 const getMyKyc=async (req,res)=>{
     try{
-        const userId=req.params._id;
+        const userId=req.result._id;
         if(!userId){
             return res.status(400).json({
                 message:"user id not found"
             })
         }
 
-        const kyc=await KYC.findOne({userId});
+        const kyc=await KYCmodel.findOne({userId});
         if(!kyc){
             return res.status(404).json({
                 message:"KYC not found"
@@ -2901,8 +2976,8 @@ const getPendingKyc=async (req,res)=>{
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
-        const totalKyc=await KYC.countDocuments({status:"pending"});
-        const kyc=await  KYC.find({status:"pending"})
+        const totalKyc=await KYCmodel.countDocuments({status:"pending"});
+        const kyc=await  KYCmodel.find({status:"pending"})
         .populate("userId",
             "username email phoneNumber"
         ).sort({createdAt:-1})
@@ -2943,12 +3018,33 @@ const approveKyc=async(req,res)=>{
     try{
 
         const {_id}=req.params;
+        if(!_id){
+            return res.status(400).json({
+                message:"Id not found"
+            })
+        }
 
-        const kyc=await KYC.findById(_id);
+        if (!mongoose.Types.ObjectId.isValid(_id)) {
+            return res.status(400).json({
+                message: "Invalid KYC id"
+            });
+        }
+        const kyc=await KYCmodel.findById(_id);
 
         if(!kyc){
             return res.status(404).json({
                 message:"KYC not found!"
+            });
+        }
+        if (kyc.status === "approved") {
+            return res.status(400).json({
+                message: "KYC already approved"
+            });
+        }
+
+        if (kyc.status === "rejected") {
+            return res.status(400).json({
+                message: "Rejected KYC cannot be approved"
             });
         }
 
@@ -2975,8 +3071,18 @@ const rejectKYC=async(req,res)=>{
     try{
 
         const {_id}=req.params;
+        if(!_id){
+            return res.status(409).json({
+                message:"Id not found"
+            })
+        }
+        if (!mongoose.Types.ObjectId.isValid(_id)) {
+            return res.status(400).json({
+                message: "Invalid KYC id"
+            });
+        }
         const {reason}=req.body;
-        const kyc=await KYC.findById(_id);
+        const kyc=await KYCmodel.findById(_id);
 
         if(!kyc){
             return res.status(404).json({
@@ -2986,8 +3092,8 @@ const rejectKYC=async(req,res)=>{
 
         kyc.status="rejected";
 
-        kyc.rejectionReason=
-            reason || "Documents mismatch";
+        kyc.rejectionReason=reason || "Documents mismatch";
+            
 
         kyc.verifiedBy=req.result._id;
 
@@ -3006,9 +3112,251 @@ const rejectKYC=async(req,res)=>{
         });
     }
 };
-//help ,receipt  ,create notification ,my notification , mark notification
+//receipt  ,create notification ,my notification , mark notification
 
-module.exports={registerAdmin,registerStudent,loginAdmin,loginStudent,searchStudent,
-    isSpace,createMenu,getMenu,getMenuByDay,updateMessMenu,deleteMenu,fileComplaint,deleteComplaint,
-    resolveComplaint,viewComplaint,viewRoomComplaint,logout,myComplaints,studentProfile,adminProfile
+//help number
+const getAdminContacts = async (req, res) => {
+    try {
+        const admins = await User.find(
+            { role: "admin" },
+            "_id username phoneNumber"
+        );
+
+        if (admins.length === 0) {
+            return res.status(404).json({
+                message: "No admins found"
+            });
+        }
+
+        res.status(200).json({
+            admins
+        });
+
+    } catch (err) {
+        res.status(500).json({
+            message: err.message
+        });
+    }
+};
+
+//const getRentalAggremnt
+
+//create announcement
+const createAnnouncement = async (req, res) => {
+    try {
+
+        const adminId = req.result._id;
+
+        if (!adminId) {
+            return res.status(400).json({
+                message: "Admin Id not present"
+            });
+        }
+
+        let { title, description } = req.body;
+
+        if (!title || !description) {
+            return res.status(400).json({
+                message: "Required fields are missing"
+            });
+        }
+
+        title = title.trim();
+        description = description.trim();
+
+        const expiresAt = new Date(
+            Date.now() + 30 * 24 * 60 * 60 * 1000
+        );
+
+        const announcement =await Announcement.create({
+                title,
+                description,
+                createdBy: adminId,
+                expiresAt
+            });
+
+            
+        res.status(201).json({
+            message: "Announcement created successfully",
+            announcement
+        });
+
+    } catch (err) {
+        res.status(500).json({
+            message: err.message
+        });
+    }
+};
+//update announcement
+const updateAnnouncement = async (req, res) => {
+    try {
+
+        const adminId = req.result._id;
+
+        if (!adminId) {
+            return res.status(400).json({
+                message: "Admin id not found"
+            });
+        }
+
+        const { announcementId } = req.params;
+
+        if (!announcementId) {
+            return res.status(400).json({
+                message: "Announcement id is required"
+            });
+        }
+
+        let { title, description } = req.body;
+        if (!title && !description) {
+            return res.status(400).json({
+                message: "At least one field is required"
+            });
+        }
+        const announcement =await Announcement.findById(announcementId);
+            
+        if (!announcement) {
+            return res.status(404).json({
+                message: "Announcement not found"
+            });
+        }
+
+        if (title) {
+            title = title.trim();
+            if (title.length === 0) {
+                return res.status(400).json({
+                    message: "Title cannot be empty"
+                });
+            }
+
+            announcement.title = title;
+        }
+
+        if (description) {
+            description = description.trim();
+
+            if (description.length === 0) {
+                return res.status(400).json({
+                    message:
+                        "Description cannot be empty"
+                });
+            }
+
+            announcement.description =description;
+        }
+
+        await announcement.save();
+
+        res.status(200).json({
+            message:"Announcement updated successfully",
+            announcement
+        });
+
+    } catch (err) {
+        res.status(500).json({
+            message: err.message
+        });
+    }
+};
+
+//get all annoucement
+const getAnnouncements = async (req, res) => {
+    try {
+
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+
+        if (page < 1 || limit < 1) {
+            return res.status(400).json({
+                message: "Page and limit must be greater than 0"
+            });
+        }
+
+        const skip = (page - 1) * limit;
+
+        const [totalAnnouncements, announcements] =await Promise.all([
+                Announcement.countDocuments(),
+                Announcement.find()
+                    .populate("createdBy", "username")
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(limit)
+            ]);
+
+            
+        const totalPages =Math.max(1, Math.ceil(totalAnnouncements / limit));
+    
+        if (page > totalPages &&totalAnnouncements > 0) {
+            return res.status(400).json({
+                message: "Page does not exist"
+            });
+        }
+
+        res.status(200).json({
+            totalAnnouncements,
+            totalPages,
+            currentPage: page,
+            hasNextPage: page < totalPages,
+            hasPrevPage: page > 1,
+            announcements
+        });
+
+    } catch (err) {
+        res.status(500).json({
+            message: err.message
+        });
+    }
+};
+
+//delete announcement
+const deleteAnnouncement = async (req, res) => {
+    try {
+        const { announcementId } = req.params;
+        if(!announcementId){
+            return res.status(400).json({
+                message:"announcement is missing"
+            })
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(announcementId)) {
+            return res.status(400).json({
+                message: "Invalid announcement id"
+            });
+        }
+        
+        const announcement =await Announcement.findByIdAndDelete(announcementId);
+            
+
+        if (!announcement) {
+            return res.status(404).json({
+                message: "Announcement not found"
+            });
+        }
+
+        res.status(200).json({
+            message:
+                "Announcement deleted successfully"
+        });
+
+    } catch (err) {
+        res.status(500).json({
+            message: err.message
+        });
+    }
+};
+module.exports={verifyOTP,resendOTP,studentDashboard,adminDashboard,
+registerAdmin,loginAdmin,registerStudent,loginStudent,
+logout,deleteStudent,allResidentStudents,getStudentByCollege,
+pastStudents,isSpace,createMenu,getMenu,getMenuByDay,
+todayMenu,updateMessMenu,deleteMenu,fileComplaint,
+updateComplaint,myComplaints,deleteComplaint,resolveComplaint,
+viewComplaint,viewRoomComplaint,viewComplaintByStatus,
+complaintStats,studentProfile, adminProfile,updateMyProfile,updateProfileByAdmin,
+createFeeStructure,getMyFees,getPendingFees,payFee,
+createRoom,updateRoom,getAllRooms,getRoomByNumber,
+deleteRoom,shiftStudentRoom,searchStudent ,applyLeave,
+returnToHostel,studentsOnLeave,createBus,updateBus,
+viewBus,deleteBus,submitKyc,getMyKyc,getPendingKyc,
+approveKyc,rejectKYC,getAdminContacts ,createAnnouncement,
+updateAnnouncement,getAnnouncements,deleteAnnouncement
 }
