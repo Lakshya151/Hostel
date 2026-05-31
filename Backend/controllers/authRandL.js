@@ -501,25 +501,25 @@ const registerStudent=async(req,res)=>{
         });
         
         // SEND REGISTRATION OTP
-        await sendMail(
-            normalizedEmail,
-            "Hostel Registration OTP",
-            `
-            <h2>Welcome to Hostel Management</h2>
+        // await sendMail(
+        //     normalizedEmail,
+        //     "Hostel Registration OTP",
+        //     `
+        //     <h2>Welcome to Hostel Management</h2>
 
-            <p>Your OTP is:</p>
+        //     <p>Your OTP is:</p>
 
-            <h1>${otp}</h1>
+        //     <h1>${otp}</h1>
 
-            <p>
-                OTP valid for 5 minutes.
-            </p>
-            `
-        );
-
+        //     <p>
+        //         OTP valid for 5 minutes.
+        //     </p>
+        //     `
+        // );
+        const createdBy = req.result._id;
         const newStudent=await Student.create({userId:newUser._id,roomNo,course,collegeName,year,guardianName,guardianPhone,feeDue});
       
-        const registrationFeeRecord=await Fee.create({studentId:newStudent._id,feeType:"registration",
+        const registrationFeeRecord=await Fee.create({studentId:newStudent._id,createdBy,feeType:"registration",
             totalAmount:registrationFee,totalPaid:registrationFee,
             installments:[
                     {
@@ -929,7 +929,8 @@ const isSpace=async (req,res)=>{
                 message: "Room number is required!"
             });
         }
-        const room=await Room.findOne({roomNo});
+        const normalizeRoomNo=roomNo.trim().toUpperCase();
+        const room=await Room.findOne({roomNo:normalizeRoomNo});
         if(!room){
             return res.status(404).json({
                 message:"room with this number doesn't exits!"
@@ -939,7 +940,7 @@ const isSpace=async (req,res)=>{
         const availableSeat=room.capacity-occupied;
         if(availableSeat>0){
             return res.status(200).json({
-                roomNo:roomNo,
+                roomNo:normalizeRoomNo,
                 capacity:room.capacity,
                 occupiedStudent:occupied,
                 availableSeat,
@@ -948,7 +949,7 @@ const isSpace=async (req,res)=>{
             })
         }
         return res.status(400).json({
-            roomNo:roomNo,
+            roomNo:normalizeRoomNo,
                 capacity:room.capacity,
                 occupiedStudent:occupied,
                 availableSeat:0,
@@ -964,6 +965,12 @@ const isSpace=async (req,res)=>{
 //set menu
 const createMenu=async (req,res)=>{
     try{
+        const adminId=req.result._id;
+        if(!adminId){
+            return res.status(400).json({
+                message:"admin id not found"
+            })
+        }
         const {day,breakfast,lunch,snacks,dinner,type}=req.body;
 
         if(!day || !type){
@@ -981,14 +988,15 @@ const createMenu=async (req,res)=>{
                 message:"Credential missing"
             })
         }
-        const alreadyExist=await Mess.findOne({day,type});
+        const normalizeDay=day.trim().toUpperCase();
+        const alreadyExist=await Mess.findOne({day:normalizeDay,type});
         if(alreadyExist){
             return res.status(400).json({
                 message:"Menu already exist for this day!"
             })
         }
         const messMenu=await Mess.create({
-            day,breakfast,lunch,snacks,dinner,type
+            day:normalizeDay,breakfast,lunch,snacks,dinner,type
         })
         res.status(201).json({
             menu:messMenu,
@@ -1008,7 +1016,7 @@ const getMenu=async (req,res)=>{
         const skip = (page - 1) * limit;
          
         const totalMenus = await Mess.countDocuments();
-        const menu=await Mess.find().sort({createdAt:-1})
+        const menu=await Mess.find().sort({createdAt:1})
         .skip(skip).limit(limit)
         
         if(menu.length===0){
@@ -1103,8 +1111,12 @@ const updateMessMenu = async (req, res) => {
                 message:"Please provide day and type!"
             })
         }
+        const normalizeDay = day.charAt(0).toUpperCase() +day.slice(1).toLowerCase();
+    
+        const normalizeType=type.trim().toLowerCase();
+
         const updatedMenu = await Mess.findOneAndUpdate(
-            {day,type},  
+            {day:normalizeDay,type:normalizeType},  
             req.body,   
             { new: true ,runValidators:true} 
         );
@@ -1131,14 +1143,17 @@ const updateMessMenu = async (req, res) => {
 //delete menu
 const deleteMenu=async (req,res)=>{
     try{
-        const {day}=req.params;
-        if(!day){
+        const {day,type}=req.params;
+        if(!day||!type){
             return res.status(400).json({
-                message:"Please enter day"
+                message:"Please enter day and type"
             })
         }
+        const normalizeDay = day.charAt(0).toUpperCase() +day.slice(1).toLowerCase();
+    
+        const normalizeType=type.trim().toLowerCase();
 
-        const menu=await Mess.findOneAndDelete({day});
+        const menu=await Mess.findOneAndDelete({day:normalizeDay,type:normalizeType});
 
         if(!menu){
             return res.status(404).json({
@@ -1160,6 +1175,12 @@ const deleteMenu=async (req,res)=>{
 //file complaint
 const fileComplaint=async (req,res)=>{
     try{
+        const commonId=req.result._id;
+        if(!commonId){
+            return res.status(400).json({
+                message:"common id is missing"
+            })
+        }
         const{roomNo,title,description}=req.body;
 
         if(!roomNo ||!title){
@@ -1167,8 +1188,11 @@ const fileComplaint=async (req,res)=>{
                 message:"credentials missing!"
             })
         }
+        const normalizeRoomNo=roomNo.trim().toUpperCase();
+        const room = await Room.findOne({ roomNo :normalizeRoomNo});
 
-        const room = await Room.findOne({ roomNo });
+        const normalizeTitle=title.trim();
+        const normalizeDesc=description.trim();
 
         if (!room) {
             return res.status(404).json({
@@ -1176,14 +1200,14 @@ const fileComplaint=async (req,res)=>{
             });
         }
 
-        const isExist=await Complaint.findOne({roomNo,title,status:"pending"});
+        const isExist=await Complaint.findOne({roomNo:normalizeRoomNo,title:normalizeTitle,status:"pending"});
         if(isExist){
             return res.status(200).json({
                 message:"complaint already exists !"
             })
         }
 
-        const complaint=await Complaint.create({roomNo,title,description,userId: req.result._id});
+        const complaint=await Complaint.create({roomNo:normalizeRoomNo,title:normalizeTitle,description:normalizeDesc,userId: req.result._id});
         res.status(201).json({
             complaint,
             message:"complaint file successfully!"
@@ -1356,7 +1380,7 @@ const deleteComplaint=async (req,res)=>{
 //resolve complaint (user)
 const resolveComplaint = async (req, res) => {
     try {
-        const { _id } = req.params;
+        const { _id } = req.params; //complaint id
         if (!_id) {
             return res.status(400).json({
                 message: "Complaint id is required"
@@ -1462,12 +1486,13 @@ const viewRoomComplaint=async (req,res)=>{
                 message:"roomNo not found!"
             })
         }
+        const normalizeRoomNo=roomNo.trim().toUpperCase();
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
-        const totalComplaints=await Complaint.countDocuments({roomNo});
-        const complaints=await Complaint.find({roomNo}).sort({createdAt:-1})
+        const totalComplaints=await Complaint.countDocuments({roomNo:normalizeRoomNo});
+        const complaints=await Complaint.find({roomNo:normalizeRoomNo}).sort({createdAt:-1})
         .skip(skip).limit(limit)
         
         if(complaints.length===0){
@@ -1615,7 +1640,12 @@ const viewComplaintByStatus = async (req, res) => {
 //count complaints (admin)
 const complaintStats = async (req, res) => {
     try {
-
+        const adminId=req.result._id;
+        if(!adminId){
+            return res.status(400).json({
+                message:"admin id is missing"
+            })
+        }
         const totalComplaints = await Complaint.countDocuments();
 
         const pending = await Complaint.countDocuments({
@@ -1648,15 +1678,38 @@ const studentProfile = async (req, res) => {
 
     try {
 
-        const userId = req.result._id;
+        const commonId = req.result._id;
+        if(!commonId){
+            return res.status(400).json({
+                message:"Message not present"
+            })
+        }
+        const {studentId}=req.params;
 
-        const student =await Student.findOne({userId: userId})
-        .populate('userId','username email phoneNumber role profilePic aadhar address');
+        const student = await Student.findById(studentId)
+            .populate(
+                'userId',
+                'username email phoneNumber role profilePic aadhar address'
+            );
 
         if (!student) {
             return res.status(404).json({
                 message: "Student not found!"
             });
+        }
+
+        // Admin can view anyone
+        if (req.result.role !== "admin") {
+
+            // Student can only view own profile
+            if (
+                student.userId._id.toString() !==
+                req.result._id
+            ) {
+                return res.status(403).json({
+                    message: "Unauthorized access!"
+                });
+            }
         }
 
         res.status(200).json({
@@ -1742,11 +1795,34 @@ const updateMyProfile = async (req, res) => {
         }
 
         if (email) {
+            if (!validator.isEmail(email)) {
+                return res.status(400).json({
+                    message:"Invalid email"
+                })
+            }
             updateData.email =email.trim().toLowerCase();
         }
 
         if (phoneNumber) {
-            updateData.phoneNumber =phoneNumber;
+
+            const existingPhone = await User.findOne({
+                phoneNumber,
+                _id: { $ne: userId }
+            });
+
+            if (existingPhone) {
+                return res.status(409).json({
+                    message: "Phone number already exists"
+                });
+            }
+
+            if (!validator.isMobilePhone(phoneNumber, 'en-IN')) {
+                return res.status(400).json({
+                    message: "Invalid phone number"
+                });
+            }
+
+            updateData.phoneNumber = phoneNumber;
         }
 
         // profile picture cooldown
@@ -1777,16 +1853,9 @@ const updateMyProfile = async (req, res) => {
         }
 
         if (aadhar) {
-            if (!validator.isNumeric(aadhar)) {
+            if (!/^\d{12}$/.test(aadhar)) {
                 return res.status(400).json({
-                    message:"Invalid Aadhaar number!"
-                });
-            }
-
-            if (aadhar.length !== 12) {
-                return res.status(400).json({
-                    message:
-                        "Aadhaar must be 12 digits!"
+                    message: "Invalid Aadhaar number!"
                 });
             }
 
@@ -1803,18 +1872,29 @@ const updateMyProfile = async (req, res) => {
             }
             updateData.aadhar = aadhar;
         }
-        const existingEmail = await User.findOne({
-            email: updateData.email,
-            _id: { $ne: userId }
-        });
-        
-        if(existingEmail){
-            return res.status(409).json({
-                message:"Email already exists"
-            })
+        if (updateData.email) {
+
+            const existingEmail =await User.findOne({
+                    email: updateData.email,
+                    _id: { $ne: userId }
+                });
+                
+
+            if (existingEmail) {
+                return res.status(409).json({
+                    message: "Email already exists"
+                });
+            }
         }
-        const updatedUser =
-            await User.findByIdAndUpdate(
+
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({
+                message:
+                    "No valid fields provided"
+            });
+        }
+
+        const updatedUser =await User.findByIdAndUpdate(
                 userId,
                 updateData,
                 {
@@ -1822,6 +1902,8 @@ const updateMyProfile = async (req, res) => {
                     runValidators: true
                 }
             ).select("username email phoneNumber profilePic aadhar");
+            
+        
         return res.status(200).json({
             message:
                 "Profile updated successfully!",
@@ -1849,6 +1931,11 @@ const updateProfileByAdmin=async (req,res)=>{
             updateUserData.username =username.trim();
         }
         if (email) {
+            if (!validator.isEmail(email)) {
+                return res.status(400).json({
+                    message:"Invalid email"
+                })
+            }
             updateUserData.email = email.trim().toLowerCase();
 
             const existingEmail = await User.findOne({
@@ -1862,8 +1949,26 @@ const updateProfileByAdmin=async (req,res)=>{
                 });
             }
         }
-        if(phoneNumber){
-            updateUserData.phoneNumber=phoneNumber
+        if (phoneNumber) {
+
+            const existingPhone = await User.findOne({
+                phoneNumber,
+                _id: { $ne: id }
+            });
+
+            if (existingPhone) {
+                return res.status(409).json({
+                    message: "Phone number already exists"
+                });
+            }
+
+            if (!validator.isMobilePhone(phoneNumber, 'en-IN')) {
+                return res.status(400).json({
+                    message: "Invalid phone number"
+                });
+            }
+
+            updateUserData.phoneNumber = phoneNumber;
         }
         if (aadhar) {
             const aadhaarRegex =/^[0-9]{12}$/;
@@ -1888,7 +1993,17 @@ const updateProfileByAdmin=async (req,res)=>{
         if(collegeName)updateStudentData.collegeName=collegeName;
         if (year) updateStudentData.year = year;
         if (guardianName) updateStudentData.guardianName =guardianName;
-        if (guardianPhone)updateStudentData.guardianPhone=guardianPhone;
+        if (guardianPhone) {
+
+            if (!validator.isMobilePhone(guardianPhone,'en-IN')) {
+                return res.status(400).json({
+                    message:
+                        "Invalid guardian phone number"
+                });
+            }
+
+            updateStudentData.guardianPhone =guardianPhone;
+        }
          // address validation
         if(address){
             if (!address ||!address.city ||!address.state || !address.pincode) {
@@ -1900,6 +2015,11 @@ const updateProfileByAdmin=async (req,res)=>{
             updateUserData.address=address;
         }
         
+        if (Object.keys(updateUserData).length === 0 &&Object.keys(updateStudentData).length === 0) {
+            return res.status(400).json({
+                message:"No valid fields provided"
+            });
+        }
 
         const updatedUser=await User.findOneAndUpdate({_id:id},updateUserData,{new:true}).select(
             'username email phoneNumber aadhar'
@@ -2231,7 +2351,8 @@ const updateRoom=async (req,res)=>{
         }
         const {capacity,floor,type,isAC}=req.body;
 
-        const room=await Room.findOne({roomNo});
+        const normalizeRoomNo=roomNo.trim().toUpperCase();
+        const room=await Room.findOne({roomNo:normalizeRoomNo});
 
         if(!room){
             return res.status(404).json({
@@ -2316,7 +2437,9 @@ const getRoomByNumber=async (req,res)=>{
                 message:"room number is not provided!"
             })
         }
-        const room = await Room.findOne({roomNo})
+
+        const normalizeRoomNo=roomNo.trim().toUpperCase();
+        const room = await Room.findOne({roomNo:normalizeRoomNo})
         .populate({
             path:"student",
             select:"username email phoneNumber address"
@@ -2344,7 +2467,9 @@ const deleteRoom=async (req,res)=>{
                 message:"room Number isn't provided!"
             })
         }
-        const room = await Room.findOne({ roomNo });
+
+        const normalizeRoomNo=roomNo.trim().toUpperCase();
+        const room = await Room.findOne({ roomNo:normalizeRoomNo });
 
         if (!room) {
             return res.status(404).json({
@@ -2356,7 +2481,7 @@ const deleteRoom=async (req,res)=>{
                 message:"occupied room can't be deleted!"
             })
         }
-        await Room.findOneAndDelete({roomNo});
+        await Room.findOneAndDelete({roomNo:normalizeRoomNo});
 
         res.status(200).json({
             message:"Room deleted Successfully!"
