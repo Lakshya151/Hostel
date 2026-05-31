@@ -56,7 +56,8 @@ const {registerAdmin,registerStudent,loginAdmin,loginStudent, searchStudent,
      createAnnouncement,
      updateAnnouncement,
      getAnnouncements,
-     deleteAnnouncement}=require('../controllers/authRandL');
+     deleteAnnouncement,
+     myComplaints}=require('../controllers/authRandL');
 const validateStudent = require('../middlewares/validateStudent');
 
 
@@ -91,7 +92,7 @@ router.get('/pastStudents',adminMiddleware,pastStudents);
 //search student
 router.get('/searchStudent',adminMiddleware,searchStudent);
 //check if room has space
-router.post('/isSpace',adminMiddleware,isSpace);
+router.get('/isSpace/:roomNo',adminMiddleware,isSpace);
 //create menu
 router.post('/createMenu',adminMiddleware,createMenu);
 //get menu
@@ -101,19 +102,21 @@ router.get('/getMenuByDay/:day',getMenuByDay);
 //today's menu
 router.get('/todayMenu',todayMenu);
 //update menu
-router.patch('/updateMessMenu',adminMiddleware,updateMessMenu);
+router.patch('/updateMessMenu/:day/:type',adminMiddleware,updateMessMenu);
 //delete menu by day
-router.delete('/deleteMenu/:day',adminMiddleware,deleteMenu);
+router.delete('/deleteMenu/:day/:type',adminMiddleware,deleteMenu);
 //file complaint
-router.post('/fileComplaint',fileComplaint);
+router.post('/fileComplaint',commonMiddleware,fileComplaint);
 //update complaint
 router.patch('/updateComplaint/:_id',adminMiddleware,updateComplaint);
 //delete complaint
-router.delete('/deleteComplaint/:_id',studentMiddleware,deleteComplaint);
+router.delete('/deleteComplaint/:_id',commonMiddleware,deleteComplaint);
 //resolve  Complaint
 router.patch("/resolveComplaint/:_id",commonMiddleware,resolveComplaint);
 //view all complaint
 router.get('/viewComplaint',adminMiddleware,viewComplaint);
+//view mycomplaint
+router.get('/myComplaints',commonMiddleware,myComplaints)
 //view Complaint by room
 router.get('/viewRoomComplaint/:roomNo',viewRoomComplaint);
 //view complaint by status
@@ -121,7 +124,7 @@ router.get('/viewComplaintByStatus',adminMiddleware,viewComplaintByStatus);
 //complaint stats
 router.get('/complaintStats',adminMiddleware,complaintStats);
 //studentProfile
-router.get('/studentProfile',studentMiddleware,studentProfile);
+router.get('/studentProfile/:studentId',commonMiddleware,studentProfile);
 //adminProfile
 router.get('/adminProfile',adminMiddleware,adminProfile);
 //updateProfile

@@ -48,23 +48,14 @@ const validateStudent = (data) => {
     }
 
     // phone validation
-    if (
-        !validator.isMobilePhone(
-            data.phoneNumber,
-            'en-IN'
-        )
-    ) {
+    if (!validator.isMobilePhone(data.phoneNumber, 'en-IN') ) {
         throw new Error(
             "Invalid student phone number"
         );
     }
 
     if (
-        !validator.isMobilePhone(
-            data.guardianPhone,
-            'en-IN'
-        )
-    ) {
+        !validator.isMobilePhone(data.guardianPhone,'en-IN' )) {
         throw new Error(
             "Invalid guardian phone number"
         );
