@@ -43,10 +43,11 @@ const studentSchema=new Schema({
         min:10,
         max:12
     },
-    feeDue:{
-        type:String,
-        required:true
-    }
+    feeDue: {
+    type: Number,
+    default: 0,
+    min: 0
+}
 })
 
 module.exports=mongoose.model('Student',studentSchema);

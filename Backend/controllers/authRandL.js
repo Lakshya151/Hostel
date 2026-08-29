@@ -256,14 +256,26 @@ const adminDashboard = async (req, res) => {
         }); 
 
         // pending fees
-        const pendingFees = await Fee.countDocuments({
-            installments: {
-                $elemMatch: {
-                    status: "pending"
+        const pendingFeeResult = await Fee.aggregate([
+        {
+            $unwind: "$installments"
+        },
+        {
+            $match: {
+                "installments.status": "pending"
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                totalPending: {
+                    $sum: "$installments.amount"
                 }
             }
-        });
+        }
+]);
 
+const pendingFees = pendingFeeResult[0]?.totalPending || 0;
         res.status(200).json({
 
             students: {
@@ -452,7 +464,7 @@ const registerStudent=async(req,res)=>{
         validateStudent(req.body);
         const {username,email,phoneNumber,aadhar,
             roomNo,course,year,guardianName,collegeName,
-            guardianPhone,feeDue,profilePic,registrationFee,address}=req.body;
+            guardianPhone,totalFee,profilePic,registrationFee,address}=req.body;
 
         const normalizedEmail = email.trim().toLowerCase();
         const isRegister=await User.findOne({email:normalizedEmail});
@@ -464,12 +476,29 @@ const registerStudent=async(req,res)=>{
                 message:"Student already register!"
             })
         }
-        const room=await Room.findOne({roomNo});
+        let room=await Room.findOne({roomNo});
 
         if (!room) {
-            return res.status(404).json({
-                message: "Room not found!"
+            // return res.status(404).json({
+            //     message: "Room not found!"
+            // });
+            try{const {roomNo,floor,capacity, type,isAC}=req.body;
+            if(!roomNo ||!capacity){
+                return res.status(400).json({
+                    message:"Room number and capacity is required!"
+                })
+            }
+                const room=await Room.create({roomNo,floor,capacity,
+                type,isAC,student:[]
+            })}
+            catch(err){
+                console.error(err);
+
+            res.status(500).json({
+                message: err.message,
+                stack: err.stack
             });
+            }
         }
 
         const occupied=room.student.length;
@@ -484,6 +513,7 @@ const registerStudent=async(req,res)=>{
                 message:"Valid registration fee required!"
             });
         }
+        
         // address validation
         if (!address ||!address.city ||!address.state || !address.pincode) {
             return res.status(400).json({
@@ -491,7 +521,50 @@ const registerStudent=async(req,res)=>{
                     "Complete address is required!"
             });
         }
+        const normalizedTotalFee = Number(totalFee);
 
+if (
+    !Number.isFinite(normalizedTotalFee) ||
+    normalizedTotalFee <= 0
+) {
+    return res.status(400).json({
+        message: "Valid total fee required!"
+    });
+}
+
+const totalPaise = Math.round(normalizedTotalFee * 100);
+
+// 1st installment = 50%
+const firstInstallmentPaise = Math.floor(totalPaise / 2);
+
+// Remaining 50%
+const remainingPaise = totalPaise - firstInstallmentPaise;
+
+// Divide remaining into 3 installments
+const eachInstallmentPaise = Math.floor(remainingPaise / 3);
+
+// Last installment gets rounding difference
+const lastInstallmentPaise =
+    remainingPaise - (eachInstallmentPaise * 2);
+
+const installments = [
+    {
+        amount: firstInstallmentPaise / 100,
+        status: "pending"
+    },
+    {
+        amount: eachInstallmentPaise / 100,
+        status: "pending"
+    },
+    {
+        amount: eachInstallmentPaise / 100,
+        status: "pending"
+    },
+    {
+        amount: lastInstallmentPaise / 100,
+        status: "pending"
+    }
+];
         const otp=generateOTP();
 
         const newUser=await User.create({username,email:normalizedEmail,phoneNumber,aadhar,address,role:"student",profilePic,isResident:true
@@ -500,24 +573,24 @@ const registerStudent=async(req,res)=>{
             otpExpiry: Date.now() + 5 * 60 * 1000
         });
         
-        // SEND REGISTRATION OTP
-        // await sendMail(
-        //     normalizedEmail,
-        //     "Hostel Registration OTP",
-        //     `
-        //     <h2>Welcome to Hostel Management</h2>
+        //SEND REGISTRATION OTP
+        await sendMail(
+            normalizedEmail,
+            "Hostel Registration OTP",
+            `
+            <h2>Welcome to Hostel Management</h2>
 
-        //     <p>Your OTP is:</p>
+            <p>Your OTP is:</p>
 
-        //     <h1>${otp}</h1>
+            <h1>${otp}</h1>
 
-        //     <p>
-        //         OTP valid for 5 minutes.
-        //     </p>
-        //     `
-        // );
+            <p>
+                OTP valid for 5 minutes.
+            </p>
+            `
+        );
         const createdBy = req.result._id;
-        const newStudent=await Student.create({userId:newUser._id,roomNo,course,collegeName,year,guardianName,guardianPhone,feeDue});
+        const newStudent=await Student.create({userId:newUser._id,roomNo,course,collegeName,year,guardianName,guardianPhone});
       
         const registrationFeeRecord=await Fee.create({studentId:newStudent._id,createdBy,feeType:"registration",
             totalAmount:registrationFee,totalPaid:registrationFee,
@@ -529,7 +602,14 @@ const registerStudent=async(req,res)=>{
                     }
                 ]
         });
-        
+        const totalFeeRecord = await Fee.create({
+    studentId: newStudent._id,
+    createdBy,
+    feeType: "hostel",
+    totalAmount: normalizedTotalFee,
+    totalPaid: 0,
+    installments
+});
 
         room.student.push(newUser._id);
         await room.save();
@@ -717,13 +797,13 @@ const deleteStudent = async (req, res) => {
     }
 };
 //get all present resident student
-const allResidentStudents=async (req,res)=>{
-    try{
+const allResidentStudents = async (req, res) => {
+    try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
-         
-        const residentStudentStats = await Student.aggregate([ //for pagination , to get the count of resident students
+
+        const residentStudentStats = await Student.aggregate([
             {
                 $lookup: {
                     from: "users",
@@ -746,42 +826,104 @@ const allResidentStudents=async (req,res)=>{
             }
         ]);
 
-        const totalStudents =residentStudentStats[0]?.count || 0;
-        
-        const students=await Student.find().populate({
-            path:"userId",
-            match:{
-                isResident:true,
-                role:"student"
-            },select:"username email phoneNumber profilePic aadhar"
-        }).sort({createdAt:-1})
-        .skip(skip)
-        .limit(limit);
-        
+        const totalStudents =
+            residentStudentStats[0]?.count || 0;
 
-        // remove null users
+        const students = await Student.find()
+            .populate({
+                path: "userId",
+                match: {
+                    isResident: true,
+                    role: "student"
+                },
+                select:
+                    "username email phoneNumber profilePic aadhar"
+            })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        // Remove students whose user is not resident
         const activeStudents = students.filter(
             student => student.userId !== null
         );
 
-        if(activeStudents.length===0){
+        if (activeStudents.length === 0) {
             return res.status(404).json({
-                message:"No active student found"
-            })
+                message: "No active student found"
+            });
         }
+
+        // ==========================================
+        // ADD PENDING FEE FOR EACH STUDENT
+        // ==========================================
+
+        const studentsWithFees = await Promise.all(
+            activeStudents.map(async (student) => {
+
+                const fees = await Fee.find({
+                    studentId: student._id
+                });
+
+                let totalPending = 0;
+
+                fees.forEach((fee) => {
+                    (fee.installments || []).forEach(
+                        (installment) => {
+
+                            if (
+                                String(
+                                    installment.status
+                                ).toLowerCase() === "pending"
+                            ) {
+                                totalPending +=
+                                    Number(
+                                        installment.amount
+                                    ) || 0;
+                            }
+                        }
+                    );
+                });
+
+                return {
+                    ...student.toObject(),
+
+                    // Pending fee calculated from installments
+                    totalPending,
+
+                    // Useful for frontend/filtering
+                    pendingFee: totalPending,
+
+                    feeStatus:
+                        totalPending > 0
+                            ? "pending"
+                            : "paid"
+                };
+            })
+        );
+
         res.status(200).json({
             currentPage: page,
-            totalPages:Math.ceil(totalStudents/ limit),
+            totalPages: Math.ceil(
+                totalStudents / limit
+            ),
             totalStudents,
             studentsPerPage: limit,
-            students: activeStudents
-        })
-    }catch(err){
+            students: studentsWithFees
+        });
+
+    } catch (err) {
+
+        console.error(
+            "allResidentStudents error:",
+            err
+        );
+
         res.status(500).json({
-            message:err.message
-        })
+            message: err.message
+        });
     }
-}
+};
 //get student using college name
 const getStudentByCollege=async (req,res)=>{
     try{
@@ -988,7 +1130,7 @@ const createMenu=async (req,res)=>{
                 message:"Credential missing"
             })
         }
-        const normalizeDay=day.trim().toUpperCase();
+        const normalizeDay = day.charAt(0).toUpperCase() +day.slice(1).toLowerCase();
         const alreadyExist=await Mess.findOne({day:normalizeDay,type});
         if(alreadyExist){
             return res.status(400).json({
@@ -1677,19 +1819,18 @@ const complaintStats = async (req, res) => {
 const studentProfile = async (req, res) => {
 
     try {
-
         const commonId = req.result._id;
-        if(!commonId){
+        if (!commonId) {
             return res.status(400).json({
-                message:"Message not present"
-            })
+                message: "Message not present"
+            });
         }
-        const {studentId}=req.params;
-
+        const { studentId } = req.params;
+        // Find student
         const student = await Student.findById(studentId)
             .populate(
-                'userId',
-                'username email phoneNumber role profilePic aadhar address'
+                "userId",
+                "username email phoneNumber role profilePic aadhar address"
             );
 
         if (!student) {
@@ -1704,7 +1845,7 @@ const studentProfile = async (req, res) => {
             // Student can only view own profile
             if (
                 student.userId._id.toString() !==
-                req.result._id
+                req.result._id.toString()
             ) {
                 return res.status(403).json({
                     message: "Unauthorized access!"
@@ -1712,20 +1853,78 @@ const studentProfile = async (req, res) => {
             }
         }
 
+        /*
+         * Get student's hostel fee structure
+         * This contains:
+         * totalAmount
+         * totalPaid
+         * installments[]
+         */
+        const fee = await Fee.findOne({
+            studentId: student._id,
+            feeType: "hostel"
+        });
+
+        let totalFee = 0;
+        let totalPaid = 0;
+        let pendingFee = 0;
+        let installments = [];
+        let pendingInstallments = [];
+
+        if (fee) {
+            totalFee = Number(fee.totalAmount) || 0;
+            totalPaid = Number(fee.totalPaid) || 0;
+
+            installments = fee.installments || [];
+
+            // Get only pending installments
+            pendingInstallments = installments.filter(
+                installment =>
+                    installment.status === "pending"
+            );
+
+            // Calculate remaining amount
+            pendingFee = pendingInstallments.reduce(
+                (sum, installment) =>
+                    sum + (Number(installment.amount) || 0),
+                0
+            );
+        }
+
         res.status(200).json({
-            username:student.userId.username,
+
+            // Student information
+            username: student.userId.username,
             email: student.userId.email,
-            phoneNumber:student.userId.phoneNumber,
-            role:student.userId.role,
-            profilePic:student.userId.profilePic,
-            aadhar:student.userId.aadhar,
-            roomNo:student.roomNo,
-            course:student.course,
-            collegeName:student.collegeName,
-            year:student.year,
-            guardianName:student.guardianName,
-            guardianPhone:student.guardianPhone,
-            address:student.userId.address
+            phoneNumber: student.userId.phoneNumber,
+            role: student.userId.role,
+            profilePic: student.userId.profilePic,
+            aadhar: student.userId.aadhar,
+
+            roomNo: student.roomNo,
+            course: student.course,
+            collegeName: student.collegeName,
+            year: student.year,
+
+            guardianName: student.guardianName,
+            guardianPhone: student.guardianPhone,
+
+            address: student.userId.address,
+
+            // =========================
+            // FEE INFORMATION
+            // =========================
+
+            totalFee,
+
+            totalPaid,
+
+            pendingFee,
+
+            installments,
+
+            pendingInstallments
+
         });
 
     } catch (err) {
@@ -1872,20 +2071,20 @@ const updateMyProfile = async (req, res) => {
             }
             updateData.aadhar = aadhar;
         }
-        if (updateData.email) {
+        // if (updateData.email) {
 
-            const existingEmail =await User.findOne({
-                    email: updateData.email,
-                    _id: { $ne: userId }
-                });
+        //     const existingEmail =await User.findOne({
+        //             email: updateData.email,
+        //             _id: { $ne: userId }
+        //         });
                 
 
-            if (existingEmail) {
-                return res.status(409).json({
-                    message: "Email already exists"
-                });
-            }
-        }
+        //     if (existingEmail) {
+        //         return res.status(409).json({
+        //             message: "Email already exists"
+        //         });
+        //     }
+        // }
 
         if (Object.keys(updateData).length === 0) {
             return res.status(400).json({
@@ -2049,20 +2248,27 @@ const updateProfileByAdmin=async (req,res)=>{
         })
     }
 }
-//create fee sturcture (installments)(admin)
-const createFeeStructure = async (req, res) => {
+//update student installment
+const updateStudentInstallmentByAdmin = async (req, res) => {
 
     try {
-        const createdBy = req.result._id;
-        const {studentId,feeType,totalAmount,installments} = req.body;
-        
-        if (!studentId || !feeType ||!totalAmount ||!installments) {
+        const { studentId, installmentId } = req.params;
+        const {amount,markAsPaid} = req.body;
+        // VALIDATION
+        if (!studentId || !installmentId) {
             return res.status(400).json({
-                message: "All fields are required!"
+                message: "Student ID and installment ID are required!"
             });
         }
+        if (amount === undefined ||amount === null ||Number(amount) <= 0){
+            return res.status(400).json({
+                message: "Valid installment amount is required!"
+            });
+        }
+        const newAmount = Number(amount);
 
-        // check student exists
+        // CHECK STUDENT
+
         const student = await Student.findById(studentId);
 
         if (!student) {
@@ -2070,49 +2276,336 @@ const createFeeStructure = async (req, res) => {
                 message: "Student not found!"
             });
         }
-        const alreadyExist = await Fee.findOne({studentId, feeType});
 
-        if(alreadyExist){
-            return res.status(409).json({
-                message:"Fee structure already exists!"
+        // FIND HOSTEL FEE
+
+        const fee = await Fee.findOne({
+            studentId: studentId,
+            feeType: "hostel"
+        });
+
+        if (!fee) {
+            return res.status(404).json({
+                message: "Hostel fee structure not found!"
             });
         }
-        // installments validation
-        if (!Array.isArray(installments) ||installments.length === 0){
-            return res.status(400).json({
-                message: "Installments are required!"
+
+
+        // ==============================
+        // FIND INSTALLMENT
+        // ==============================
+        const installment =
+            fee.installments.id(installmentId);
+
+        if (!installment) {
+            return res.status(404).json({
+                message: "Installment not found!"
             });
         }
 
-        // calculate installment total
-        const invalidInstallment = installments.some(item => !item.amount || item.amount <= 0);
 
-        if(invalidInstallment){
-            return res.status(400).json({
-                message:"Invalid installment amount!"
-            });
-        }
-        const installmentTotal = installments.reduce(
-            (sum, item) => sum + item.amount, 0
-        );
-        // check total amount match
-        if (installmentTotal !== totalAmount) {
+        // ==============================
+        // DO NOT MODIFY PAID INSTALLMENT
+        // ==============================
+
+        if (installment.status === "paid") {
+
             return res.status(400).json({
                 message:
-                    "Installment total must equal totalAmount"
+                    "Paid installment cannot be modified!"
+            });
+
+        }
+
+
+        // ==============================
+        // UPDATE INSTALLMENT AMOUNT
+        // ==============================
+
+        const oldAmount = installment.amount;
+
+        installment.amount = newAmount;
+
+
+        // ==============================
+        // OPTIONAL: MARK AS PAID
+        // ==============================
+
+        if (markAsPaid === true) {
+
+            installment.status = "paid";
+
+            installment.paidAt = new Date();
+
+
+            /*
+             * Add the newly paid amount
+             * to totalPaid.
+             */
+            fee.totalPaid =
+                Number(fee.totalPaid || 0) +
+                newAmount;
+        }
+
+
+        // ==============================
+        // SAVE FEE
+        // ==============================
+
+        await fee.save();
+
+
+        // ==============================
+        // CALCULATE REMAINING FEE
+        // ==============================
+
+        const pendingInstallments =
+            fee.installments.filter(
+                item =>
+                    item.status === "pending"
+            );
+
+
+        const pendingFee =
+            pendingInstallments.reduce(
+                (sum, item) =>
+                    sum +
+                    Number(item.amount || 0),
+                0
+            );
+
+
+        res.status(200).json({
+
+            message:
+                markAsPaid === true
+                    ? "Installment updated and marked as paid!"
+                    : "Installment amount updated successfully!",
+
+            oldAmount,
+
+            newAmount,
+
+            totalFee: fee.totalAmount,
+
+            totalPaid: fee.totalPaid,
+
+            pendingFee,
+
+            installment,
+
+            fee
+
+        });
+
+
+    } catch (err) {
+
+        console.error(
+            "updateStudentInstallmentByAdmin error:",
+            err
+        );
+
+        res.status(500).json({
+            message: err.message
+        });
+
+    }
+};
+//create fee sturcture (installments)(admin)
+const createFeeStructure = async (req, res) => {
+
+    try {
+
+        const createdBy = req.result._id;
+
+        const {
+            studentId,
+            feeType,
+            totalAmount
+        } = req.body;
+
+
+        // Validate required fields
+        if (!studentId || !feeType || !totalAmount) {
+            return res.status(400).json({
+                message: "Student, fee type and total amount are required!"
             });
         }
 
-        // create fee structure
-        const fee = await Fee.create({studentId,createdBy,feeType,totalAmount,totalPaid:0,installments});
+
+        // Check student exists
+        const student = await Student.findById(studentId);
+
+        if (!student) {
+            return res.status(404).json({
+                message: "Student not found!"
+            });
+        }
+
+
+        // Check if fee structure already exists
+        const alreadyExist = await Fee.findOne({
+            studentId,
+            feeType
+        });
+
+        if (alreadyExist) {
+            return res.status(409).json({
+                message: "Fee structure already exists!"
+            });
+        }
+
+
+        const total = Number(totalAmount);
+
+
+        if (total <= 0) {
+            return res.status(400).json({
+                message: "Total amount must be greater than 0!"
+            });
+        }
+
+
+        let installments = [];
+
+
+        /*
+         * ==========================================
+         * HOSTEL FEE
+         * ==========================================
+         *
+         * Total fee = ₹40,000
+         *
+         * 1st installment = 50%
+         * Remaining 50% divided into 3 parts
+         *
+         * ₹20,000
+         * ₹6,666.67
+         * ₹6,666.67
+         * ₹6,666.66
+         *
+         * Total = ₹40,000
+         *
+         */
+
+        if (feeType === "hostel") {
+
+            // Convert to paise to avoid decimal rounding problems
+            const totalPaise = Math.round(total * 100);
+
+
+            // First installment = 50%
+            const firstInstallmentPaise =
+                Math.floor(totalPaise / 2);
+
+
+            // Remaining 50%
+            const remainingPaise =
+                totalPaise - firstInstallmentPaise;
+
+
+            // Divide remaining amount into 3
+            const eachInstallmentPaise =
+                Math.floor(remainingPaise / 3);
+
+
+            // Last installment gets rounding difference
+            const lastInstallmentPaise =
+                remainingPaise -
+                (eachInstallmentPaise * 2);
+
+            installments = [
+
+                {
+                    amount: firstInstallmentPaise / 100,
+                    status: "pending"
+                },
+
+                {
+                    amount: eachInstallmentPaise / 100,
+                    status: "pending"
+                },
+
+                {
+                    amount: eachInstallmentPaise / 100,
+                    status: "pending"
+                },
+
+                {
+                    amount: lastInstallmentPaise / 100,
+                    status: "pending"
+                }
+
+            ];
+
+        }
+        /*
+         * ==========================================
+         * REGISTRATION FEE
+         * ==========================================
+         *
+         * Registration fee is one installment.
+         */
+
+        else if (feeType === "registration") {
+
+            installments = [
+
+                {
+                    amount: total,
+                    status: "pending"
+                }
+
+            ];
+
+        }
+        // Safety check
+        const installmentTotal = installments.reduce(
+            (sum, installment) =>
+                sum + installment.amount,
+            0
+        );
+
+
+        if (Math.abs(installmentTotal - total) > 0.01) {
+            return res.status(400).json({
+                message: "Installments do not match total amount!"
+            });
+        }
+
+
+        // Create fee structure
+        const fee = await Fee.create({
+
+            studentId,
+
+            createdBy,
+
+            feeType,
+
+            totalAmount: total,
+
+            totalPaid: 0,
+
+            installments
+
+        });
+
 
         res.status(201).json({
 
-            message:"Fee structure created successfully!",
+            message: "Fee structure created successfully!",
+
             fee
+
         });
 
+
     } catch (err) {
+
+        console.error("createFeeStructure error:", err);
+
         res.status(500).json({
             message: err.message
         });
@@ -2134,18 +2627,29 @@ const getMyFees = async (req, res) => {
         }
 
         // get fees
-        const fees = await Fee.find({ studentId: student._id  })
-        .sort({ createdAt:-1 });
+       const fees = await Fee.find({ studentId: student._id })
+        .sort({ createdAt: -1 });
 
-        if(fees.length === 0){
-            return res.status(404).json({
-                message:"No fees found!"
-            });
-        }
-
-        res.status(200).json({
-            fees
+    if (fees.length === 0) {
+        return res.status(404).json({
+            message: "No fees found!"
         });
+    }
+
+    let totalPending = 0;
+
+    fees.forEach((fee) => {
+        (fee.installments || []).forEach((installment) => {
+            if (installment.status === "pending") {
+                totalPending += Number(installment.amount) || 0;
+            }
+        });
+    });
+
+res.status(200).json({
+    fees,
+    totalPending
+});
 
     } catch (err) {
 
@@ -2160,52 +2664,89 @@ const getPendingFees = async (req, res) => {
 
     try {
 
-        const page =parseInt(req.query.page) || 1;
-        const limit =parseInt(req.query.limit) || 10;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
-        const totalPendingFees =await Fee.countDocuments({
-            installments: {
-                    $elemMatch: {
-                        status: "pending"
-                    }
-                } 
-            });
 
+        // Total pending amount in ₹
+        const pendingFeeResult = await Fee.aggregate([
+            {
+                $unwind: "$installments"
+            },
+            {
+                $match: {
+                    "installments.status": "pending"
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    totalPendingFees: {
+                        $sum: "$installments.amount"
+                    }
+                }
+            }
+        ]);
+
+        const totalPendingFees =
+            pendingFeeResult[0]?.totalPendingFees || 0;
+
+
+        // Fee records having pending installments
         const pendingFees = await Fee.find({
             installments: {
-                $elemMatch: {status: "pending"}
+                $elemMatch: {
+                    status: "pending"
+                }
             }
         })
         .populate({
             path: "studentId",
             populate: {
                 path: "userId",
-                select:
-                    "username email phoneNumber"
+                select: "username email phoneNumber"
             }
-        }).sort({ createdAt: -1 })
+        })
+        .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit)
-        
+        .limit(limit);
+
 
         if (pendingFees.length === 0) {
-
             return res.status(404).json({
                 message: "No pending fees!"
             });
         }
 
-        const totalPages =Math.ceil(totalPendingFees / limit);
-        if(page > totalPages && totalPendingFees > 0){
+
+        // Number of fee records for pagination
+        const totalPendingRecords = await Fee.countDocuments({
+            installments: {
+                $elemMatch: {
+                    status: "pending"
+                }
+            }
+        });
+
+        const totalPages =
+            Math.ceil(totalPendingRecords / limit);
+
+
+        if (page > totalPages && totalPendingRecords > 0) {
             return res.status(400).json({
                 message: "Page does not exist"
             });
         }
 
+
         return res.status(200).json({
 
+            // Total ₹ pending
             totalPendingFees,
+
+            // Number of fee documents
+            totalPendingRecords,
 
             totalPages,
 
@@ -2216,8 +2757,8 @@ const getPendingFees = async (req, res) => {
             hasPrevPage: page > 1,
 
             pendingFees
-
         });
+
 
     } catch (err) {
 
@@ -2225,6 +2766,59 @@ const getPendingFees = async (req, res) => {
             message: err.message
         });
 
+    }
+};
+const getStudentPendingFees = async (req, res) => {
+    try {
+        const { studentId } = req.params;
+
+        if (!studentId) {
+            return res.status(400).json({
+                message: "Student ID is required!"
+            });
+        }
+
+        const fees = await Fee.find({
+            studentId: studentId,
+            installments: {
+                $elemMatch: {
+                    status: "pending"
+                }
+            }
+        })
+        .sort({ createdAt: -1 });
+
+        let totalPending = 0;
+
+        fees.forEach((fee) => {
+            (fee.installments || []).forEach((installment) => {
+
+                if (
+                    String(installment.status).toLowerCase() ===
+                    "pending"
+                ) {
+                    totalPending +=
+                        Number(installment.amount) || 0;
+                }
+
+            });
+        });
+
+        return res.status(200).json({
+            fees,
+            totalPending
+        });
+
+    } catch (err) {
+
+        console.error(
+            "getStudentPendingFees error:",
+            err
+        );
+
+        return res.status(500).json({
+            message: err.message
+        });
     }
 };
 //pay installment
@@ -3483,5 +4077,5 @@ deleteRoom,shiftStudentRoom,searchStudent ,applyLeave,
 returnToHostel,studentsOnLeave,createBus,updateBus,
 viewBus,deleteBus,submitKyc,getMyKyc,getPendingKyc,
 approveKyc,rejectKYC,getAdminContacts ,createAnnouncement,
-updateAnnouncement,getAnnouncements,deleteAnnouncement
+updateAnnouncement,getAnnouncements,deleteAnnouncement,getStudentPendingFees,updateStudentInstallmentByAdmin
 }

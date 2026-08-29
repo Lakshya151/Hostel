@@ -36,6 +36,7 @@ const {registerAdmin,registerStudent,loginAdmin,loginStudent, searchStudent,
      payFee,
      createRoom,
      updateRoom,
+     getStudentPendingFees,
      getAllRooms,
      getRoomByNumber,
      deleteRoom,
@@ -57,7 +58,7 @@ const {registerAdmin,registerStudent,loginAdmin,loginStudent, searchStudent,
      updateAnnouncement,
      getAnnouncements,
      deleteAnnouncement,
-     myComplaints}=require('../controllers/authRandL');
+     myComplaints,updateStudentInstallmentByAdmin}=require('../controllers/authRandL');
 const validateStudent = require('../middlewares/validateStudent');
 
 
@@ -90,7 +91,7 @@ router.get('/getStudentByCollege/:collegeName',adminMiddleware,getStudentByColle
 //past Students
 router.get('/pastStudents',adminMiddleware,pastStudents);
 //search student
-router.get('/searchStudent',adminMiddleware,searchStudent);
+//router.get('/searchStudent',adminMiddleware,searchStudent);
 //check if room has space
 router.get('/isSpace/:roomNo',adminMiddleware,isSpace);
 //create menu
@@ -133,12 +134,14 @@ router.patch('/updateMyProfile',studentMiddleware,updateMyProfile);
 router.patch('/updateProfileByAdmin/:id',adminMiddleware,updateProfileByAdmin);
 //create fee structure
 router.post('/createFeeStructure',adminMiddleware,createFeeStructure);
-//get mt fee
-router.get('/getMyFees',studentMiddleware,getMyFees);
-//getPending Fees
-router.get('/getPendingFees',adminMiddleware,getPendingFees);
-//pay fee
-router.post('/payFee',payFee);
+// get mt fee
+router.get('/getMyFees', studentMiddleware, getMyFees);
+// get student pending fee
+router.get("/studentPendingFees/:studentId",adminMiddleware, getStudentPendingFees);
+// get pending fees
+router.get('/getPendingFees', adminMiddleware, getPendingFees);
+// pay fee
+router.post('/payFee', payFee);
 //create Room
 router.post('/createRoom',adminMiddleware,createRoom);
 //update Room
@@ -187,5 +190,10 @@ router.patch('/updateAnnouncement/:announcementId',adminMiddleware,updateAnnounc
 router.get('/getAnnouncement',getAnnouncements);
 //delete announcement
 router.delete('/deleteAnnouncement/:announcementId',adminMiddleware,deleteAnnouncement);
-
+// UPDATE INSTALLMENT BY ADMIN
+router.put(
+    "/students/:studentId/installments/:installmentId",
+    adminMiddleware,
+    updateStudentInstallmentByAdmin
+);
 module.exports=router;

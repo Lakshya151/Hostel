@@ -28,7 +28,9 @@
 //   process.exit();
 // })();
 
-require('dotenv').config({ path: '../.env' });
+require("dotenv").config({
+    path: require("path").resolve(__dirname, "../.env")
+});
 
 const mongoose = require('mongoose');
 const User = require('../models/User');
@@ -52,6 +54,7 @@ const User = require('../models/User');
         await User.create({
             username: "Lakshya",
             email: email.trim().toLowerCase(),
+
             aadhar:"423716339865",
             phoneNumber:"7895694667",
             role: "admin",

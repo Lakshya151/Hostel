@@ -1,14 +1,19 @@
 const mongoose = require('mongoose');
 
 const busSchema = new mongoose.Schema({
-
-    busNo: {
-        type: String,
-        required: true,
-        minlength:10,
-        maxlength:10
-    },
-
+    //This is latter
+    // busNo: {
+    //     type: String,
+    //     required: true,
+    //     minlength:10,
+    //     maxlength:10
+    // },
+    //for testing
+busNo: {
+    type: String,
+    required: true,
+    trim: true
+},
     route: {
         type: String,
         required: true,
