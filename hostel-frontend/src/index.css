@@ -1,0 +1,1137 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f5f7fb;
+  color: #172033;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.app {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* =========================================================
+   SIDEBAR
+========================================================= */
+
+aside {
+  width: 245px;
+  background: #111827;
+  color: #d7dce5;
+  padding: 20px 14px;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  inset: 0 auto 0 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px 25px;
+  color: white;
+}
+
+.brand b {
+  display: block;
+  font-size: 17px;
+}
+
+.brand small {
+  display: block;
+  color: #8e99aa;
+  margin-top: 2px;
+}
+
+.logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #4f46e5;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 20px;
+}
+
+.logo.big {
+  width: 58px;
+  height: 58px;
+  font-size: 28px;
+  margin: auto;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav a {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 12px;
+  color: #aeb8c8;
+  text-decoration: none;
+  border-radius: 9px;
+  font-size: 14px;
+}
+
+.nav a:hover,
+.nav a.active {
+  background: #202938;
+  color: white;
+}
+
+.nav a.active {
+  box-shadow: inset 3px 0 #6366f1;
+}
+
+.logout {
+  margin-top: auto;
+  border: 0;
+  background: transparent;
+  color: #aeb8c8;
+  padding: 12px;
+  text-align: left;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.logout:hover {
+  color: white;
+}
+
+/* =========================================================
+   MAIN / HEADER
+========================================================= */
+
+main {
+  margin-left: 245px;
+  width: calc(100% - 245px);
+}
+
+header {
+  height: 76px;
+  background: #fff;
+  border-bottom: 1px solid #e7eaf0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 30px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+header h2 {
+  margin: 2px 0 0;
+  font-size: 19px;
+}
+
+.muted {
+  color: #748096;
+  font-size: 13px;
+}
+
+.user {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 14px;
+}
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #e9e7ff;
+  color: #4f46e5;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+
+.avatar.xl {
+  width: 72px;
+  height: 72px;
+  font-size: 25px;
+}
+
+.content {
+  padding: 28px 30px;
+  max-width: 1500px;
+  margin: auto;
+}
+
+/* =========================================================
+   WELCOME / DASHBOARD
+========================================================= */
+
+.welcome {
+  padding: 25px 0;
+}
+
+.welcome h1,
+.toolbar h1 {
+  margin: 4px 0 7px;
+  font-size: 27px;
+}
+
+.welcome p {
+  margin: 4px 0;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.stat,
+.card {
+  background: #fff;
+  border: 1px solid #e7eaf0;
+  border-radius: 13px;
+  box-shadow: 0 2px 8px #1b24320a;
+}
+
+.stat {
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #eef0ff;
+  color: #4f46e5;
+  display: grid;
+  place-items: center;
+}
+
+.stat span {
+  display: block;
+  color: #748096;
+  font-size: 12px;
+}
+
+.stat strong {
+  display: block;
+  font-size: 21px;
+  margin-top: 4px;
+}
+
+.card {
+  padding: 20px;
+  margin-bottom: 18px;
+}
+
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.card h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.big-number {
+  font-size: 35px;
+  font-weight: 800;
+  margin: 15px 0 2px;
+}
+
+.row {
+  display: flex;
+  gap: 35px;
+  margin-top: 25px;
+  font-size: 13px;
+}
+
+.progress {
+  height: 9px;
+  background: #eef0f4;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: 25px;
+}
+
+.progress i {
+  height: 100%;
+  display: block;
+  background: #6366f1;
+}
+
+/* =========================================================
+   TOOLBAR
+========================================================= */
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  margin-bottom: 22px;
+}
+
+.toolbar h1 {
+  margin-bottom: 3px;
+}
+
+/* =========================================================
+   GENERAL SEARCH
+========================================================= */
+
+.search {
+  width: 280px;
+  background: #fff;
+  border: 1px solid #dfe3eb;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 11px;
+  color: #7b8494;
+}
+
+.search input {
+  border: 0;
+  outline: 0;
+  padding: 10px 0;
+  width: 100%;
+}
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+.primary {
+  border: 0;
+  background: #4f46e5;
+  color: white;
+  padding: 10px 15px;
+  border-radius: 8px;
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  font-weight: 600;
+}
+
+.primary:hover {
+  background: #4338ca;
+}
+
+.full {
+  width: 100%;
+  justify-content: center;
+  padding: 12px;
+}
+
+/* =========================================================
+   TABLE
+========================================================= */
+
+.table-wrap {
+  overflow: auto;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 13px 10px;
+  border-bottom: 1px solid #edf0f4;
+  white-space: nowrap;
+}
+
+th {
+  color: #748096;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+td small {
+  display: block;
+  color: #8b94a4;
+  margin-top: 3px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #eef0ff;
+  color: #4f46e5;
+  font-size: 11px;
+}
+
+.badge.green {
+  background: #e7f8ee;
+  color: #15803d;
+}
+
+.badge.red {
+  background: #ffeded;
+  color: #dc2626;
+}
+
+.badge.yellow {
+  background: #fff5d9;
+  color: #a16207;
+}
+
+.actions {
+  display: flex;
+  gap: 5px;
+}
+
+.icon {
+  width: 30px;
+  height: 30px;
+  border: 1px solid #e0e4ea;
+  background: #fff;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+}
+
+.icon.danger {
+  color: #dc2626;
+}
+
+.icon.success {
+  color: #15803d;
+}
+
+/* =========================================================
+   STATES
+========================================================= */
+
+.empty {
+  text-align: center;
+  padding: 35px;
+  color: #8b94a4;
+}
+
+.loading {
+  padding: 50px;
+  text-align: center;
+  color: #748096;
+}
+
+.error {
+  background: #fff0f0;
+  border: 1px solid #ffd2d2;
+  color: #c62828;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  font-size: 13px;
+}
+
+.successbox {
+  background: #ecfdf3;
+  color: #15803d;
+  border: 1px solid #b7ebca;
+  padding: 10px;
+  border-radius: 8px;
+  margin: 10px 0;
+}
+
+/* =========================================================
+   MENU
+========================================================= */
+
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.meal-lines p {
+  margin: 12px 0;
+  line-height: 1.45;
+}
+
+.meal-lines b {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #748096;
+  margin-bottom: 3px;
+}
+
+.installment {
+  display: inline-block;
+  padding: 5px 8px;
+  background: #f5f6fa;
+  border-radius: 6px;
+  margin: 2px;
+  font-size: 11px;
+}
+
+.announcement-list {
+  max-width: 900px;
+}
+
+/* =========================================================
+   PROFILE
+========================================================= */
+
+.profile {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.profile h2 {
+  margin: 0 0 8px;
+}
+
+/* =========================================================
+   AUTH
+========================================================= */
+
+.auth {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #f5f7ff, #eef2ff);
+}
+
+.auth-card {
+  width: 400px;
+  background: #fff;
+  padding: 38px;
+  border-radius: 18px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 20px 60px #11182718;
+  text-align: center;
+}
+
+.auth-card h1 {
+  margin: 15px 0 4px;
+}
+
+.tabs {
+  display: flex;
+  background: #f3f4f6;
+  border-radius: 9px;
+  padding: 3px;
+  margin: 25px 0;
+}
+
+.tabs button {
+  border: 0;
+  background: transparent;
+  flex: 1;
+  padding: 9px;
+  border-radius: 7px;
+}
+
+.tabs button.selected {
+  background: #fff;
+  box-shadow: 0 1px 5px #11182712;
+  font-weight: 700;
+}
+
+.auth-card form,
+.modal form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: left;
+}
+
+.auth-card label,
+.modal label,
+form > label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.auth-card input,
+.modal input,
+.modal textarea,
+.modal select,
+form > label input,
+form > label textarea,
+form > label select {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 11px;
+  border: 1px solid #dfe3eb;
+  border-radius: 8px;
+  outline: 0;
+  background: #fff;
+}
+
+.modal textarea,
+form textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.linkbtn {
+  border: 0;
+  background: none;
+  color: #4f46e5;
+}
+
+/* =========================================================
+   MODAL
+========================================================= */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: #11182766;
+  display: grid;
+  place-items: center;
+  z-index: 20;
+  padding: 20px;
+}
+
+.modal {
+  background: white;
+  border-radius: 14px;
+  padding: 25px;
+  width: min(520px, 100%);
+  position: relative;
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.modal h2 {
+  margin-top: 0;
+}
+
+.close {
+  position: absolute;
+  right: 13px;
+  top: 13px;
+  border: 0;
+  background: #f3f4f6;
+  border-radius: 7px;
+  padding: 5px;
+}
+
+.formgrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.check {
+  display: flex !important;
+  align-items: center;
+  gap: 7px;
+}
+
+.check input {
+  width: auto !important;
+  margin: 0 !important;
+}
+
+.json {
+  background: #111827;
+  color: #d1fae5;
+  padding: 18px;
+  border-radius: 9px;
+  overflow: auto;
+  font-size: 12px;
+}
+
+/* =========================================================
+   STUDENT NAME / DETAILS
+========================================================= */
+
+.student-name {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  color: #172033;
+}
+
+.student-name:hover {
+  text-decoration: underline;
+  color: #4f46e5;
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(180px, 1fr)
+  );
+  gap: 20px;
+}
+
+.details-grid div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.details-grid span {
+  color: #777;
+  font-size: 13px;
+}
+
+.details-grid strong {
+  font-size: 16px;
+}
+
+.details-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.details-list p {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 0;
+}
+
+/* =========================================================
+   ⭐ STUDENT SEARCH & FILTERS
+========================================================= */
+
+.student-filter-bar {
+  display: grid;
+  grid-template-columns:
+    180px
+    minmax(260px, 1fr)
+    200px
+    180px
+    auto;
+
+  gap: 18px;
+  align-items: end;
+  width: 100%;
+}
+
+.student-filter-bar label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+/* Select boxes */
+
+.student-filter-bar label > select {
+  width: 100%;
+  height: 44px;
+  margin: 0;
+  padding: 0 12px;
+  border: 1px solid #dfe3eb;
+  border-radius: 9px;
+  background: #fff;
+  color: #172033;
+  outline: none;
+  cursor: pointer;
+}
+
+.student-filter-bar label > select:hover {
+  border-color: #c8ced9;
+}
+
+.student-filter-bar label > select:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px #4f46e51a;
+}
+
+/* =========================================================
+   STUDENT FILTER SEARCH BOX
+
+   This intentionally overrides the global .search class
+   above so the student filter does not look broken.
+========================================================= */
+
+.student-filter-bar .search {
+  width: 100%;
+  height: 44px;
+  margin: 0;
+  padding: 0 12px;
+
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 9px;
+
+  background: #fff;
+  border: 1px solid #dfe3eb;
+  border-radius: 9px;
+
+  color: #7b8494;
+}
+
+.student-filter-bar .search:focus-within {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px #4f46e51a;
+}
+
+.student-filter-bar .search svg {
+  flex-shrink: 0;
+  color: #7b8494;
+}
+
+.student-filter-bar .search input {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+
+  border: 0;
+  outline: 0;
+  background: transparent;
+
+  font-size: 14px;
+  color: #172033;
+}
+
+.student-filter-bar .search input::placeholder {
+  color: #8b94a4;
+}
+
+.student-filter-bar .search input:focus {
+  border: 0;
+  box-shadow: none;
+}
+
+/* =========================================================
+   STUDENT FILTER BUTTONS
+========================================================= */
+
+.filter-buttons {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 44px;
+}
+
+.filter-buttons button {
+  height: 44px;
+  white-space: nowrap;
+}
+
+.filter-buttons .primary {
+  padding: 0 15px;
+}
+
+.filter-buttons .secondary {
+  height: 44px;
+  padding: 0 15px;
+
+  border: 1px solid #dfe3eb;
+  border-radius: 8px;
+
+  background: #fff;
+  color: #374151;
+
+  font-weight: 600;
+}
+
+.filter-buttons .secondary:hover {
+  background: #f5f7fb;
+  border-color: #cfd5df;
+}
+
+/* =========================================================
+   STUDENT FILTER SUMMARY
+========================================================= */
+
+.filter-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 25px;
+
+  margin-top: 20px;
+  padding-top: 16px;
+
+  border-top: 1px solid #edf0f4;
+
+  color: #748096;
+  font-size: 13px;
+}
+
+.filter-summary b {
+  color: #172033;
+}
+
+/* =========================================================
+   STUDENT REGISTER FORM
+========================================================= */
+
+.student-register-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.student-register-form h3 {
+  margin: 5px 0 -4px;
+  font-size: 15px;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 1000px) {
+  aside {
+    width: 70px;
+  }
+
+  .brand div:not(.logo),
+  .nav a:not(.active)::after,
+  .nav a {
+    font-size: 0;
+  }
+
+  .nav a {
+    justify-content: center;
+  }
+
+  .nav a svg {
+    font-size: 18px;
+  }
+
+  .logout {
+    justify-content: center;
+    font-size: 0;
+  }
+
+  .logout svg {
+    font-size: 18px;
+  }
+
+  main {
+    margin-left: 70px;
+    width: calc(100% - 70px);
+  }
+
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .menu-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* Student filters */
+  .student-filter-bar {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .student-filter-bar .filter-search {
+    grid-column: span 2;
+  }
+
+  .filter-buttons {
+    grid-column: span 2;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 650px) {
+  header {
+    padding: 0 15px;
+  }
+
+  .content {
+    padding: 20px 15px;
+  }
+
+  .stats,
+  .grid2,
+  .menu-grid,
+  .formgrid {
+    grid-template-columns: 1fr;
+  }
+
+  .toolbar {
+    align-items: stretch;
+    gap: 12px;
+    flex-direction: column;
+  }
+
+  .search {
+    width: 100%;
+  }
+
+  .auth-card {
+    width: calc(100% - 30px);
+    padding: 28px;
+  }
+
+  .user span {
+    display: none;
+  }
+
+  /* Student filters on mobile */
+  .student-filter-bar {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .student-filter-bar .filter-search {
+    grid-column: span 1;
+  }
+
+  .filter-buttons {
+    grid-column: span 1;
+    width: 100%;
+  }
+
+  .filter-buttons button {
+    flex: 1;
+  }
+
+  .filter-summary {
+    gap: 10px 18px;
+  }
+
+  .details-list p {
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+
+
+/* =========================================================
+   CLICKABLE DASHBOARD STAT
+========================================================= */
+
+.stat-clickable {
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.stat-clickable:hover {
+  transform: translateY(-2px);
+  border-color: #cfd3ff;
+  box-shadow: 0 6px 18px #1b243218;
+}
+
+.stat-clickable:focus-visible {
+  outline: 3px solid #4f46e54d;
+  outline-offset: 2px;
+}
+
+
+/* =========================================================
+   STUDENT PROFILE EDIT
+========================================================= */
+
+.student-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.student-edit-form h3 {
+  margin: 2px 0 -4px;
+  font-size: 15px;
+  color: #172033;
+}
+
+.edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  padding-top: 6px;
+}
+
+.edit-actions .secondary {
+  height: 42px;
+  padding: 0 15px;
+  border: 1px solid #dfe3eb;
+  border-radius: 8px;
+  background: #fff;
+  color: #374151;
+  font-weight: 600;
+}
+
+.edit-actions .secondary:hover {
+  background: #f5f7fb;
+}
+
+.edit-actions .primary {
+  height: 42px;
+}
+
+.student-edit-form input:focus,
+.student-edit-form select:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px #4f46e51a;
+}
+
+@media (max-width: 650px) {
+  .edit-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .edit-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+}
