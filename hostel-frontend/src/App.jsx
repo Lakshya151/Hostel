@@ -46,6 +46,11 @@ import {
   X,
   ArrowLeft,
   Edit,
+  MapPin,
+  Mail,
+  Phone,
+  Briefcase,
+  BadgeCheck,
 } from "lucide-react";
 
 /* =========================================================
@@ -209,7 +214,515 @@ function Shell({ children }) {
   );
 
   return (
-    <div className="app">
+    <>
+      <style>{`
+        /* =====================================================
+           MOBILE RESPONSIVE TABLES + SIDEBAR
+        ===================================================== */
+
+        @media (max-width: 700px) {
+          .table-wrap {
+            width: 100%;
+            overflow-x: visible !important;
+          }
+
+          .table-wrap table {
+            width: 100% !important;
+            min-width: 0 !important;
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+          }
+
+          .table-wrap thead {
+            display: none;
+          }
+
+          .table-wrap tbody,
+          .table-wrap tr,
+          .table-wrap td {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+          }
+
+          .table-wrap tbody tr {
+            margin: 0 0 14px;
+            padding: 8px 0;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            background: #fff;
+            overflow: hidden;
+          }
+
+          .table-wrap tbody tr:last-child {
+            margin-bottom: 0;
+          }
+
+          .table-wrap tbody td {
+            display: grid;
+            grid-template-columns: 92px minmax(0, 1fr);
+            align-items: center;
+            gap: 12px;
+            min-height: 42px;
+            padding: 9px 14px;
+            border: 0 !important;
+            border-bottom: 1px solid #edf1f5 !important;
+            color: #172b46;
+            overflow-wrap: anywhere;
+          }
+
+          .table-wrap tbody td:last-child {
+            border-bottom: 0 !important;
+          }
+
+          .table-wrap tbody td::before {
+            content: attr(data-label);
+            color: #7183a0;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: .55px;
+            text-transform: uppercase;
+          }
+
+          .table-wrap tbody td.actions {
+            display: grid !important;
+            grid-template-columns: 92px minmax(0, 1fr) !important;
+            align-items: center;
+            gap: 12px;
+          }
+
+          .table-wrap tbody td.actions > * {
+            justify-self: start;
+          }
+
+          .table-wrap tbody td.actions::before {
+            content: "Actions";
+          }
+
+          .table-wrap tbody td[colspan] {
+            display: block;
+            border: 0 !important;
+          }
+
+          .table-wrap tbody td[colspan]::before {
+            display: none;
+          }
+
+          .table-wrap .icon {
+            width: 38px;
+            height: 38px;
+            min-width: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .table-wrap .badge {
+            width: fit-content;
+            max-width: 100%;
+            white-space: normal;
+          }
+
+          /* Mobile sidebar: icons remain visible, text is hidden. */
+          .app > aside {
+            width: 72px !important;
+            min-width: 72px !important;
+            padding: 16px 8px !important;
+          }
+
+          .app > aside .brand {
+            justify-content: center;
+          }
+
+          .app > aside .brand > div:not(.logo) {
+            display: none;
+          }
+
+          .app > aside .nav a {
+            width: 56px;
+            min-height: 48px;
+            box-sizing: border-box;
+            padding: 12px !important;
+            margin: 2px auto;
+            justify-content: center !important;
+            gap: 0 !important;
+            font-size: 0 !important;
+          }
+
+          .app > aside .nav a svg {
+            width: 20px !important;
+            height: 20px !important;
+            min-width: 20px;
+            display: block !important;
+            flex: 0 0 20px;
+            stroke-width: 2;
+          }
+
+          .app > aside .logout {
+            width: 56px;
+            min-height: 48px;
+            margin: 8px auto 0;
+            padding: 12px !important;
+            justify-content: center !important;
+            gap: 0 !important;
+            font-size: 0 !important;
+          }
+
+          .app > aside .logout svg {
+            width: 20px !important;
+            height: 20px !important;
+            min-width: 20px;
+            display: block !important;
+            flex: 0 0 20px;
+          }
+
+          .app > main {
+            min-width: 0;
+          }
+
+          .app > main .content {
+            min-width: 0;
+            overflow-x: hidden;
+          }
+        }
+
+        /* =====================================================
+           EXTRA MOBILE POLISH
+        ===================================================== */
+
+        @media (max-width: 700px) {
+          .app > main {
+            width: calc(100vw - 72px);
+            max-width: calc(100vw - 72px);
+          }
+
+          .app > main .content {
+            width: 100%;
+            box-sizing: border-box;
+            padding-left: 14px !important;
+            padding-right: 14px !important;
+            padding-bottom: 24px !important;
+          }
+
+          .app > main .content > * {
+            max-width: 100%;
+            box-sizing: border-box;
+          }
+
+          .app > main h1 {
+            font-size: clamp(25px, 7vw, 34px) !important;
+            line-height: 1.15 !important;
+          }
+
+          .app > main h2 {
+            font-size: 20px !important;
+          }
+
+          .app > main h3 {
+            font-size: 17px !important;
+          }
+
+          .app button,
+          .app input,
+          .app select,
+          .app textarea {
+            max-width: 100%;
+            box-sizing: border-box;
+          }
+
+          .app button {
+            min-height: 42px;
+          }
+
+          /* Prevent large desktop cards from creating cramped mobile layouts. */
+          .app .card,
+          .app .panel,
+          .app .table-card {
+            max-width: 100%;
+            box-sizing: border-box;
+          }
+
+          /* Worker registration */
+          .worker-registration-layout {
+            grid-template-columns: 1fr !important;
+            border-radius: 14px !important;
+          }
+
+          .worker-registration-layout > div:first-child {
+            border-right: 0 !important;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 22px 18px !important;
+          }
+
+          .worker-registration-layout > div:last-child {
+            padding: 0 !important;
+          }
+
+          .worker-registration-layout .worker-form-grid,
+          .worker-registration-layout .worker-address-grid {
+            grid-template-columns: 1fr !important;
+            gap: 14px !important;
+          }
+
+          .worker-registration-layout label {
+            min-width: 0;
+          }
+
+          .worker-registration-layout input,
+          .worker-registration-layout select {
+            width: 100% !important;
+          }
+
+          /* Make page action rows wrap instead of overflowing. */
+          .app .page-actions,
+          .app .actions-row {
+            flex-wrap: wrap !important;
+          }
+
+          /* Search/filter sections become one column. */
+          .app .search-grid,
+          .app .filter-grid {
+            grid-template-columns: 1fr !important;
+          }
+
+          /* Fee pills and long values should wrap naturally. */
+          .app .fee-installments,
+          .app .installments,
+          .app .badges {
+            flex-wrap: wrap !important;
+          }
+
+          /* Worker lunchbox table uses its own table wrapper. */
+          .worker-lunch-table-wrap {
+            overflow-x: visible !important;
+          }
+
+          .worker-lunch-table-wrap table {
+            min-width: 0 !important;
+          }
+
+          .worker-lunch-table-wrap thead {
+            display: none;
+          }
+
+          .worker-lunch-table-wrap tbody,
+          .worker-lunch-table-wrap tr,
+          .worker-lunch-table-wrap td {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+          }
+
+          .worker-lunch-table-wrap tbody tr {
+            margin-bottom: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            overflow: hidden;
+          }
+
+          .worker-lunch-table-wrap td {
+            display: grid;
+            grid-template-columns: 82px minmax(0, 1fr);
+            gap: 10px;
+            align-items: center;
+            padding: 10px 12px;
+            border-bottom: 1px solid #edf1f5;
+            overflow-wrap: anywhere;
+          }
+
+          .worker-lunch-table-wrap td:last-child {
+            border-bottom: 0;
+          }
+
+          .worker-lunch-table-wrap td:nth-child(1)::before { content: "Student"; }
+          .worker-lunch-table-wrap td:nth-child(2)::before { content: "Room"; }
+          .worker-lunch-table-wrap td:nth-child(3)::before { content: "College"; }
+          .worker-lunch-table-wrap td:nth-child(4)::before { content: "Phone"; }
+          .worker-lunch-table-wrap td:nth-child(5)::before { content: "Status"; }
+
+          .worker-lunch-table-wrap td::before {
+            color: #7183a0;
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: .55px;
+            text-transform: uppercase;
+          }
+
+          /* Keep important icons/buttons visible and touch friendly. */
+          .app svg {
+            flex-shrink: 0;
+          }
+
+          .app .icon-button,
+          .app button.icon,
+          .app .icon {
+            flex-shrink: 0;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .app > main .content {
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+          }
+
+          .app > aside {
+            width: 64px !important;
+            min-width: 64px !important;
+            padding-left: 5px !important;
+            padding-right: 5px !important;
+          }
+
+          .app > main {
+            width: calc(100vw - 64px);
+            max-width: calc(100vw - 64px);
+          }
+
+          .app > aside .nav a,
+          .app > aside .logout {
+            width: 50px !important;
+          }
+
+          .app > main h1 {
+            font-size: 27px !important;
+          }
+
+          .worker-lunch-table-wrap td {
+            grid-template-columns: 76px minmax(0, 1fr);
+            padding: 9px 10px;
+          }
+
+          .worker-lunch-search-head,
+          .worker-lunch-table-head {
+            padding: 16px;
+          }
+
+          .worker-lunch-search-form {
+            padding: 14px 16px;
+          }
+        }
+
+        .fee-installments-grid {
+          min-width: 0;
+          width: 100%;
+        }
+
+        .fee-installments-grid > div {
+          min-width: 0;
+          max-width: 100%;
+          box-sizing: border-box;
+          overflow-wrap: anywhere;
+        }
+
+        /* =====================================================
+           MOBILE MODALS
+           Keep modal overlays inside the actual content area so
+           they never extend underneath/outside the mobile sidebar.
+        ===================================================== */
+        .modal-overlay-responsive {
+          box-sizing: border-box !important;
+        }
+
+        .modal-overlay-responsive .modal {
+          box-sizing: border-box !important;
+          max-width: 100% !important;
+          max-height: calc(100vh - 32px) !important;
+          overflow-y: auto !important;
+          overflow-x: hidden !important;
+        }
+
+        .modal-overlay-responsive .modal form {
+          width: 100%;
+          min-width: 0;
+        }
+
+        .modal-overlay-responsive .modal label {
+          min-width: 0;
+        }
+
+        .modal-overlay-responsive .modal input,
+        .modal-overlay-responsive .modal textarea,
+        .modal-overlay-responsive .modal select {
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          box-sizing: border-box;
+        }
+
+        @media (max-width: 700px) {
+          .modal-overlay-responsive {
+            left: 72px !important;
+            right: 0 !important;
+            width: calc(100vw - 72px) !important;
+            max-width: calc(100vw - 72px) !important;
+            padding: 14px !important;
+            box-sizing: border-box !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+          }
+
+          .modal-overlay-responsive .modal {
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            border-radius: 16px !important;
+            padding: 20px 16px !important;
+          }
+
+          .modal-overlay-responsive .modal h2 {
+            padding-right: 38px;
+            font-size: 20px !important;
+            line-height: 1.25 !important;
+            overflow-wrap: anywhere;
+          }
+
+          .modal-overlay-responsive .modal .close {
+            top: 12px !important;
+            right: 12px !important;
+            width: 34px !important;
+            height: 34px !important;
+          }
+
+          .modal-overlay-responsive .modal textarea {
+            min-height: 110px;
+            resize: vertical;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .modal-overlay-responsive {
+            left: 64px !important;
+            width: calc(100vw - 64px) !important;
+            max-width: calc(100vw - 64px) !important;
+            padding: 10px !important;
+          }
+
+          .modal-overlay-responsive .modal {
+            padding: 18px 13px !important;
+            border-radius: 14px !important;
+            max-height: calc(100vh - 20px) !important;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .table-wrap tbody td {
+            grid-template-columns: 82px minmax(0, 1fr);
+            gap: 10px;
+            padding: 8px 12px;
+          }
+
+          .table-wrap tbody td.actions {
+            grid-template-columns: 82px minmax(0, 1fr) !important;
+            gap: 10px;
+          }
+
+          .table-wrap tbody td::before {
+            font-size: 9px;
+          }
+        }
+      `}</style>
+
+      <div className="app">
       <aside>
         <div className="brand">
           <div className="logo">H</div>
@@ -280,7 +793,8 @@ function Shell({ children }) {
           {children}
         </section>
       </main>
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -667,7 +1181,7 @@ function Modal({
   children,
 }) {
   return (
-    <div className="overlay">
+    <div className="overlay modal-overlay-responsive">
       <div className="modal">
         <button
           className="close"
@@ -729,6 +1243,7 @@ function Table({
                         key={
                           column.key
                         }
+                        data-label={column.label}
                       >
                         {column.render
                           ? column.render(
@@ -743,7 +1258,10 @@ function Table({
                   )}
 
                   {actions && (
-                    <td className="actions">
+                    <td
+                      className="actions"
+                      data-label="Actions"
+                    >
                       {actions(row)}
                     </td>
                   )}
@@ -955,18 +1473,13 @@ function AdminDashboard() {
 ========================================================= */
 
 function StudentDashboard() {
-  const [data, setData] =
-    useState(null);
-
-  const [err, setErr] =
-    useState("");
+  const [data, setData] = useState(null);
+  const [err, setErr] = useState("");
 
   useEffect(() => {
     studentApi
       .dashboard()
-      .then((response) =>
-        setData(response.data)
-      )
+      .then((response) => setData(response.data))
       .catch((e) =>
         setErr(
           e.response?.data?.message ||
@@ -975,195 +1488,268 @@ function StudentDashboard() {
       );
   }, []);
 
-  if (err) {
-    return (
-      <ErrorBox>
-        {err}
-      </ErrorBox>
-    );
-  }
+  if (err) return <ErrorBox>{err}</ErrorBox>;
+  if (!data) return <Loading />;
 
-  if (!data) {
-    return <Loading />;
-  }
-
-  const profile =
-    data.profile?.userId;
+  const profile = data.profile?.userId;
+  const menus = data.messMenu || [];
+  const todayMenu = menus[0];
 
   return (
     <>
-      <div className="welcome">
-        <p className="muted">
-          Good to see you
-        </p>
+      <style>{`
+        .student-dashboard-page {
+          max-width: 1180px;
+          margin: 0 auto;
+        }
+        .student-dashboard-hero {
+          margin-bottom: 28px;
+        }
+        .student-dashboard-hero .eyebrow {
+          margin: 0 0 8px;
+          color: #7183a0;
+          font-size: 14px;
+          font-weight: 600;
+        }
+        .student-dashboard-hero h1 {
+          margin: 0;
+          color: #10233f;
+          font-size: clamp(34px, 4vw, 48px);
+          line-height: 1.08;
+          letter-spacing: -1.5px;
+        }
+        .student-dashboard-hero p:last-child {
+          margin: 10px 0 0;
+          color: #64748b;
+          font-size: 16px;
+        }
+        .student-dashboard-stats {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 18px;
+          margin-bottom: 24px;
+        }
+        .student-dashboard-stat {
+          min-height: 92px;
+          padding: 20px;
+          display: flex;
+          align-items: center;
+          gap: 15px;
+          border: 1px solid #e2e8f0;
+          border-radius: 18px;
+          background: #fff;
+          box-shadow: 0 8px 24px rgba(15,23,42,.05);
+        }
+        .student-dashboard-stat-icon {
+          width: 48px;
+          height: 48px;
+          display: grid;
+          place-items: center;
+          flex: 0 0 48px;
+          border-radius: 14px;
+          background: #eef0ff;
+          color: #4f46e5;
+        }
+        .student-dashboard-stat span {
+          display: block;
+          color: #7183a0;
+          font-size: 13px;
+          margin-bottom: 5px;
+        }
+        .student-dashboard-stat strong {
+          color: #10233f;
+          font-size: 24px;
+        }
+        .student-dashboard-menu {
+          overflow: hidden;
+          border: 1px solid #e2e8f0;
+          border-radius: 20px;
+          background: #fff;
+          box-shadow: 0 10px 28px rgba(15,23,42,.05);
+        }
+        .student-dashboard-menu-head {
+          padding: 24px 26px 20px;
+          border-bottom: 1px solid #edf1f5;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 16px;
+        }
+        .student-dashboard-menu-head h2 {
+          margin: 0;
+          color: #10233f;
+          font-size: 20px;
+        }
+        .student-dashboard-menu-head span {
+          padding: 7px 10px;
+          border-radius: 999px;
+          background: #f0efff;
+          color: #4f46e5;
+          font-size: 12px;
+          font-weight: 800;
+          text-transform: uppercase;
+        }
+        .student-meal-grid {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0,1fr));
+          gap: 14px;
+          padding: 22px 26px 26px;
+        }
+        .student-meal {
+          padding: 17px;
+          border: 1px solid #e8edf3;
+          border-radius: 14px;
+          background: #fbfcfe;
+        }
+        .student-meal small {
+          display: block;
+          margin-bottom: 9px;
+          color: #7183a0;
+          font-size: 11px;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: .7px;
+        }
+        .student-meal p {
+          margin: 0;
+          color: #172b46;
+          line-height: 1.5;
+        }
+        @media (max-width: 900px) {
+          .student-dashboard-stats { grid-template-columns: 1fr; }
+          .student-meal-grid { grid-template-columns: repeat(2,1fr); }
+        }
+        @media (max-width: 560px) {
+          .student-meal-grid { grid-template-columns: 1fr; padding: 18px; }
+          .student-dashboard-menu-head { padding: 20px; }
+        }
+      `}</style>
 
-        <h1>
-          Hello,{" "}
-          {profile?.username ||
-            "Student"}{" "}
-          👋
-        </h1>
+      <div className="student-dashboard-page">
+        <div className="student-dashboard-hero">
+          <p className="eyebrow">Good to see you</p>
+          <h1>Hello, {profile?.username || "Student"} 👋</h1>
+          <p>Here is your hostel overview for today.</p>
+        </div>
 
-        <p>
-          Here is your hostel
-          overview.
-        </p>
-      </div>
-
-      <div className="stats">
-        <Stat
-          label="Room"
-          value={
-            data.room?.roomNo
-          }
-          icon={BedDouble}
-        />
-
-        <Stat
-          label="Complaints"
-          value={
-            data.complaints
-              ?.totalComplaints
-          }
-          icon={
-            MessageSquareWarning
-          }
-        />
-
-        <Stat
-          label="Pending Complaints"
-          value={
-            data.complaints
-              ?.pendingComplaints
-          }
-          icon={
-            MessageSquareWarning
-          }
-        />
-      </div>
-
-      <Card title="Today's Mess Menu">
-        {data.messMenu?.length ? (
-          <div className="menu-grid">
-            {data.messMenu.map(
-              (menu, index) => (
-                <div
-                  className="meal"
-                  key={index}
-                >
-                  <b>
-                    {menu.type ||
-                      "Menu"}
-                  </b>
-
-                  <p>
-                    {menu.breakfast?.join(
-                      ", "
-                    ) || "—"}
-                  </p>
-
-                  <p>
-                    {menu.lunch?.join(
-                      ", "
-                    ) || "—"}
-                  </p>
-
-                  <p>
-                    {menu.snacks?.join(
-                      ", "
-                    ) || "—"}
-                  </p>
-
-                  <p>
-                    {menu.dinner?.join(
-                      ", "
-                    ) || "—"}
-                  </p>
-                </div>
-              )
-            )}
+        <div className="student-dashboard-stats">
+          <div className="student-dashboard-stat">
+            <div className="student-dashboard-stat-icon"><BedDouble size={21} /></div>
+            <div><span>Room</span><strong>{data.room?.roomNo || "—"}</strong></div>
           </div>
-        ) : (
-          <Empty
-            text="Today's menu is not available."
-          />
-        )}
-      </Card>
+          <div className="student-dashboard-stat">
+            <div className="student-dashboard-stat-icon"><MessageSquareWarning size={21} /></div>
+            <div><span>Complaints</span><strong>{data.complaints?.totalComplaints ?? 0}</strong></div>
+          </div>
+          <div className="student-dashboard-stat">
+            <div className="student-dashboard-stat-icon"><MessageSquareWarning size={21} /></div>
+            <div><span>Pending Complaints</span><strong>{data.complaints?.pendingComplaints ?? 0}</strong></div>
+          </div>
+        </div>
+
+        <div className="student-dashboard-menu">
+          <div className="student-dashboard-menu-head">
+            <h2>Today's Mess Menu</h2>
+            <span>{todayMenu?.type || "Menu"}</span>
+          </div>
+
+          {todayMenu ? (
+            <div className="student-meal-grid">
+              {[
+                ["Breakfast", todayMenu.breakfast],
+                ["Lunch", todayMenu.lunch],
+                ["Snacks", todayMenu.snacks],
+                ["Dinner", todayMenu.dinner],
+              ].map(([label, items]) => (
+                <div className="student-meal" key={label}>
+                  <small>{label}</small>
+                  <p>{items?.join(", ") || "Not available"}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <Empty text="Today's menu is not available." />
+          )}
+        </div>
+      </div>
     </>
   );
 }
+
 
 /* =========================================================
    WORKER REGISTRATION - ADMIN
 ========================================================= */
 
 function WorkerRegistration() {
-  const [loading,setLoading]=useState(false);
-  const [error,setError]=useState("");
-  const [success,setSuccess]=useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const emptyForm={
-    username:"",
-    email:"",
-    phoneNumber:"",
-    aadhar:"",
-    profilePic:"",
-    address:{
-      city:"",
-      state:"",
-      pincode:"",
+  const emptyForm = {
+    username: "",
+    email: "",
+    phoneNumber: "",
+    aadhar: "",
+    profilePic: "",
+    address: {
+      village: "",
+      city: "",
+      state: "",
+      pincode: "",
     },
   };
 
-  const [form,setForm]=useState(emptyForm);
+  const [form, setForm] = useState(emptyForm);
 
-  function updateField(field,value){
-    setForm(prev=>({
+  function updateField(field, value) {
+    setForm((prev) => ({
       ...prev,
-      [field]:value,
+      [field]: value,
     }));
   }
 
-  function updateAddress(field,value){
-    setForm(prev=>({
+  function updateAddress(field, value) {
+    setForm((prev) => ({
       ...prev,
-      address:{
+      address: {
         ...prev.address,
-        [field]:value,
+        [field]: value,
       },
     }));
   }
 
-  async function registerWorker(e){
+  async function registerWorker(e) {
     e.preventDefault();
     setLoading(true);
     setError("");
     setSuccess("");
 
-    try{
-      if(form.aadhar.length!==12){
+    try {
+      if (form.aadhar.length !== 12) {
         throw new Error("Aadhaar number must be 12 digits.");
       }
 
-      if(form.phoneNumber.length!==10){
+      if (form.phoneNumber.length !== 10) {
         throw new Error("Phone number must be 10 digits.");
       }
 
-      if(form.address.pincode.length!==6){
+      if (form.address.pincode.length !== 6) {
         throw new Error("Pincode must be 6 digits.");
       }
 
       await adminApi.registerWorker({
-        username:form.username.trim(),
-        email:form.email.trim().toLowerCase(),
-        phoneNumber:form.phoneNumber.trim(),
-        aadhar:form.aadhar.trim(),
-        profilePic:form.profilePic.trim(),
-        address:{
-          city:form.address.city.trim(),
-          state:form.address.state.trim(),
-          pincode:form.address.pincode.trim(),
-          country:"India",
+        username: form.username.trim(),
+        email: form.email.trim().toLowerCase(),
+        phoneNumber: form.phoneNumber.trim(),
+        aadhar: form.aadhar.trim(),
+        profilePic: form.profilePic.trim(),
+        address: {
+          village: form.address.village.trim(),
+          city: form.address.city.trim(),
+          state: form.address.state.trim(),
+          pincode: form.address.pincode.trim(),
+          country: "India",
         },
       });
 
@@ -1172,144 +1758,570 @@ function WorkerRegistration() {
       );
 
       setForm(emptyForm);
-    }catch(e){
+    } catch (e) {
       setError(
         e.response?.data?.message ||
-        e.message ||
-        "Failed to register worker"
+          e.message ||
+          "Failed to register worker"
       );
-    }finally{
+    } finally {
       setLoading(false);
     }
   }
 
-  return(
-    <>
-      <div className="welcome">
-        <p className="muted">Hostel Staff</p>
-        <h1>Register Worker</h1>
-        <p>
-          Create a lunchbox worker account for hostel operations.
-        </p>
+  const inputStyle = {
+    width: "100%",
+    boxSizing: "border-box",
+    border: "1px solid #e2e8f0",
+    borderRadius: "10px",
+    padding: "12px 14px",
+    fontSize: "14px",
+    color: "#0f172a",
+    background: "#ffffff",
+    outline: "none",
+    transition: "border-color .2s, box-shadow .2s",
+  };
+
+  const labelStyle = {
+    display: "flex",
+    flexDirection: "column",
+    gap: "7px",
+    fontSize: "13px",
+    fontWeight: 600,
+    color: "#334155",
+  };
+
+  const iconBoxStyle = {
+    width: "36px",
+    height: "36px",
+    minWidth: "36px",
+    borderRadius: "9px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "#f1f5f9",
+    color: "#475569",
+  };
+
+  const sectionStyle = {
+    padding: "22px 24px",
+    borderBottom: "1px solid #eef2f7",
+  };
+
+  return (
+    <div
+      style={{
+        maxWidth: "1180px",
+        margin: "0 auto",
+        paddingBottom: "32px",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: "20px",
+          marginBottom: "22px",
+          flexWrap: "wrap",
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontSize: "13px",
+              fontWeight: 600,
+              color: "#64748b",
+              marginBottom: "6px",
+            }}
+          >
+            Hostel Staff
+          </div>
+          <h1
+            style={{
+              margin: 0,
+              fontSize: "28px",
+              lineHeight: 1.2,
+              color: "#0f172a",
+            }}
+          >
+            Register Worker
+          </h1>
+          <p
+            style={{
+              margin: "8px 0 0",
+              color: "#64748b",
+              fontSize: "14px",
+            }}
+          >
+            Add a new staff member to your hostel operations team.
+          </p>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "9px",
+            padding: "10px 14px",
+            border: "1px solid #e2e8f0",
+            borderRadius: "10px",
+            background: "#ffffff",
+            color: "#475569",
+            fontSize: "13px",
+            fontWeight: 600,
+          }}
+        >
+          <Users size={17} />
+          Staff Account
+        </div>
       </div>
 
-      <Card title="Worker Details">
-        <form onSubmit={registerWorker}>
-          <div className="formgrid">
-            <label>
-              Full Name *
-              <input
-                required
-                value={form.username}
-                onChange={e=>updateField("username",e.target.value)}
-                placeholder="Enter worker name"
-              />
-            </label>
-
-            <label>
-              Email *
-              <input
-                required
-                type="email"
-                value={form.email}
-                onChange={e=>updateField("email",e.target.value)}
-                placeholder="worker@example.com"
-              />
-            </label>
-
-            <label>
-              Phone Number *
-              <input
-                required
-                type="tel"
-                inputMode="numeric"
-                maxLength={10}
-                value={form.phoneNumber}
-                onChange={e=>updateField("phoneNumber",e.target.value.replace(/\D/g,""))}
-                placeholder="10 digit phone number"
-              />
-            </label>
-
-            <label>
-              Aadhaar Number *
-              <input
-                required
-                type="text"
-                inputMode="numeric"
-                maxLength={12}
-                value={form.aadhar}
-                onChange={e=>updateField("aadhar",e.target.value.replace(/\D/g,""))}
-                placeholder="12 digit Aadhaar number"
-              />
-            </label>
-
-            <label>
-              Profile Picture URL
-              <input
-                type="url"
-                value={form.profilePic}
-                onChange={e=>updateField("profilePic",e.target.value)}
-                placeholder="https://..."
-              />
-            </label>
-          </div>
-
-          <h3>Address</h3>
-
-          <div className="formgrid">
-            <label>
-              City *
-              <input
-                required
-                value={form.address.city}
-                onChange={e=>updateAddress("city",e.target.value)}
-                placeholder="Enter city"
-              />
-            </label>
-
-            <label>
-              State *
-              <input
-                required
-                value={form.address.state}
-                onChange={e=>updateAddress("state",e.target.value)}
-                placeholder="Enter state"
-              />
-            </label>
-
-            <label>
-              Pincode *
-              <input
-                required
-                type="text"
-                inputMode="numeric"
-                minLength={6}
-                maxLength={6}
-                value={form.address.pincode}
-                onChange={e=>updateAddress("pincode",e.target.value.replace(/\D/g,""))}
-                placeholder="6 digit pincode"
-              />
-            </label>
-          </div>
-
-          {error && <ErrorBox>{error}</ErrorBox>}
-
-          {success && (
-            <div className="success">
-              {success}
-            </div>
-          )}
-
-          <button
-            className="primary full"
-            disabled={loading}
-            type="submit"
+      <div
+        className="worker-registration-layout"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "280px minmax(0, 1fr)",
+          background: "#ffffff",
+          border: "1px solid #e2e8f0",
+          borderRadius: "16px",
+          overflow: "hidden",
+          boxShadow: "0 8px 30px rgba(15, 23, 42, 0.06)",
+        }}
+      >
+        <div
+          style={{
+            padding: "28px 24px",
+            background: "#f8fafc",
+            borderRight: "1px solid #e2e8f0",
+          }}
+        >
+          <div
+            style={{
+              width: "58px",
+              height: "58px",
+              borderRadius: "14px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "#e2e8f0",
+              color: "#334155",
+              marginBottom: "18px",
+            }}
           >
-            {loading ? "Registering..." : "Register Worker"}
-          </button>
+            <UserRound size={28} />
+          </div>
+
+          <h2
+            style={{
+              margin: "0 0 8px",
+              fontSize: "18px",
+              color: "#0f172a",
+            }}
+          >
+            Worker profile
+          </h2>
+
+          <p
+            style={{
+              margin: "0 0 24px",
+              color: "#64748b",
+              fontSize: "13px",
+              lineHeight: 1.6,
+            }}
+          >
+            Enter the worker's basic information, identity details and current
+            address. An OTP will be sent to the registered email after creation.
+          </p>
+
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "14px",
+            }}
+          >
+            {[
+              ["01", "Personal information"],
+              ["02", "Contact & identity"],
+              ["03", "Address details"],
+            ].map(([number, text]) => (
+              <div
+                key={number}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "11px",
+                  color: "#475569",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                }}
+              >
+                <span
+                  style={{
+                    width: "28px",
+                    height: "28px",
+                    minWidth: "28px",
+                    borderRadius: "8px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "#ffffff",
+                    border: "1px solid #e2e8f0",
+                    fontSize: "11px",
+                    color: "#64748b",
+                  }}
+                >
+                  {number}
+                </span>
+                {text}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <form onSubmit={registerWorker}>
+          <div style={sectionStyle}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "11px",
+                marginBottom: "18px",
+              }}
+            >
+              <div style={iconBoxStyle}>
+                <UserRound size={18} />
+              </div>
+              <div>
+                <h3
+                  style={{
+                    margin: 0,
+                    color: "#0f172a",
+                    fontSize: "16px",
+                  }}
+                >
+                  Personal information
+                </h3>
+                <p
+                  style={{
+                    margin: "4px 0 0",
+                    color: "#94a3b8",
+                    fontSize: "12px",
+                  }}
+                >
+                  Basic details of the worker
+                </p>
+              </div>
+            </div>
+
+            <div
+              className="worker-form-grid"
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                gap: "18px",
+              }}
+            >
+              <label style={labelStyle}>
+                Full Name <span style={{ color: "#ef4444" }}>*</span>
+                <input
+                  required
+                  value={form.username}
+                  onChange={(e) => updateField("username", e.target.value)}
+                  placeholder="Enter worker name"
+                  style={inputStyle}
+                />
+              </label>
+
+              <label style={labelStyle}>
+                Profile Picture URL
+                <input
+                  type="url"
+                  value={form.profilePic}
+                  onChange={(e) => updateField("profilePic", e.target.value)}
+                  placeholder="https://..."
+                  style={inputStyle}
+                />
+              </label>
+            </div>
+          </div>
+
+          <div style={sectionStyle}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "11px",
+                marginBottom: "18px",
+              }}
+            >
+              <div style={iconBoxStyle}>
+                <ShieldCheck size={18} />
+              </div>
+              <div>
+                <h3
+                  style={{
+                    margin: 0,
+                    color: "#0f172a",
+                    fontSize: "16px",
+                  }}
+                >
+                  Contact & identity
+                </h3>
+                <p
+                  style={{
+                    margin: "4px 0 0",
+                    color: "#94a3b8",
+                    fontSize: "12px",
+                  }}
+                >
+                  Contact and verification information
+                </p>
+              </div>
+            </div>
+
+            <div
+              className="worker-form-grid"
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                gap: "18px",
+              }}
+            >
+              <label style={labelStyle}>
+                Email <span style={{ color: "#ef4444" }}>*</span>
+                <input
+                  required
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => updateField("email", e.target.value)}
+                  placeholder="worker@example.com"
+                  style={inputStyle}
+                />
+              </label>
+
+              <label style={labelStyle}>
+                Phone Number <span style={{ color: "#ef4444" }}>*</span>
+                <input
+                  required
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={10}
+                  value={form.phoneNumber}
+                  onChange={(e) =>
+                    updateField(
+                      "phoneNumber",
+                      e.target.value.replace(/\D/g, "")
+                    )
+                  }
+                  placeholder="10 digit phone number"
+                  style={inputStyle}
+                />
+              </label>
+
+              <label style={labelStyle}>
+                Aadhaar Number <span style={{ color: "#ef4444" }}>*</span>
+                <input
+                  required
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={12}
+                  value={form.aadhar}
+                  onChange={(e) =>
+                    updateField("aadhar", e.target.value.replace(/\D/g, ""))
+                  }
+                  placeholder="12 digit Aadhaar number"
+                  style={inputStyle}
+                />
+              </label>
+            </div>
+          </div>
+
+          <div style={{ ...sectionStyle, borderBottom: "none" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "11px",
+                marginBottom: "18px",
+              }}
+            >
+              <div style={iconBoxStyle}>
+                <MapPin size={18} />
+              </div>
+              <div>
+                <h3
+                  style={{
+                    margin: 0,
+                    color: "#0f172a",
+                    fontSize: "16px",
+                  }}
+                >
+                  Address details
+                </h3>
+                <p
+                  style={{
+                    margin: "4px 0 0",
+                    color: "#94a3b8",
+                    fontSize: "12px",
+                  }}
+                >
+                  Current residential address
+                </p>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr 1fr .8fr",
+                gap: "18px",
+              }}
+            >
+              <label style={labelStyle}>
+                Village <span style={{ color: "#ef4444" }}>*</span>
+                <input
+                  required
+                  value={form.address.village}
+                  onChange={(e) => updateAddress("village", e.target.value)}
+                  placeholder="Enter village"
+                  style={inputStyle}
+                />
+              </label>
+
+              <label style={labelStyle}>
+                City <span style={{ color: "#ef4444" }}>*</span>
+                <input
+                  required
+                  value={form.address.city}
+                  onChange={(e) => updateAddress("city", e.target.value)}
+                  placeholder="Enter city"
+                  style={inputStyle}
+                />
+              </label>
+
+              <label style={labelStyle}>
+                State <span style={{ color: "#ef4444" }}>*</span>
+                <input
+                  required
+                  value={form.address.state}
+                  onChange={(e) => updateAddress("state", e.target.value)}
+                  placeholder="Enter state"
+                  style={inputStyle}
+                />
+              </label>
+
+              <label style={labelStyle}>
+                Pincode <span style={{ color: "#ef4444" }}>*</span>
+                <input
+                  required
+                  type="text"
+                  inputMode="numeric"
+                  minLength={6}
+                  maxLength={6}
+                  value={form.address.pincode}
+                  onChange={(e) =>
+                    updateAddress(
+                      "pincode",
+                      e.target.value.replace(/\D/g, "")
+                    )
+                  }
+                  placeholder="6 digit pincode"
+                  style={inputStyle}
+                />
+              </label>
+            </div>
+
+            {error && (
+              <div style={{ marginTop: "18px" }}>
+                <ErrorBox>{error}</ErrorBox>
+              </div>
+            )}
+
+            {success && (
+              <div
+                style={{
+                  marginTop: "18px",
+                  padding: "12px 14px",
+                  borderRadius: "10px",
+                  border: "1px solid #bbf7d0",
+                  background: "#f0fdf4",
+                  color: "#166534",
+                  fontSize: "13px",
+                  lineHeight: 1.5,
+                }}
+              >
+                {success}
+              </div>
+            )}
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "12px",
+                marginTop: "24px",
+                paddingTop: "20px",
+                borderTop: "1px solid #eef2f7",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setForm(emptyForm);
+                  setError("");
+                  setSuccess("");
+                }}
+                disabled={loading}
+                style={{
+                  border: "1px solid #e2e8f0",
+                  background: "#ffffff",
+                  color: "#475569",
+                  borderRadius: "10px",
+                  padding: "11px 18px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  cursor: loading ? "not-allowed" : "pointer",
+                }}
+              >
+                Clear
+              </button>
+
+              <button
+                type="submit"
+                disabled={loading}
+                style={{
+                  border: "none",
+                  background: "#0f172a",
+                  color: "#ffffff",
+                  borderRadius: "10px",
+                  padding: "11px 20px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  cursor: loading ? "not-allowed" : "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  opacity: loading ? 0.7 : 1,
+                }}
+              >
+                <Check size={16} />
+                {loading ? "Registering..." : "Register Worker"}
+              </button>
+            </div>
+          </div>
         </form>
-      </Card>
-    </>
+      </div>
+
+      <style>{`
+        @media (max-width: 900px) {
+          .worker-registration-layout {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
+    </div>
   );
 }
 
@@ -1364,6 +2376,7 @@ function Students() {
     registrationFee: 0,
     profilePic: "",
     address: {
+      village: "",
       city: "",
       state: "",
       pincode: "",
@@ -1972,426 +2985,912 @@ function Students() {
       </Card>
 
       {showRegister && (
-        <Modal
-          title="Register New Student"
-          close={() =>
-            setShowRegister(false)
-          }
+        <div
+          className="overlay"
+          style={{
+            alignItems: "flex-start",
+            padding: "28px 20px",
+            overflowY: "auto",
+          }}
         >
-          <form
-            onSubmit={
-              registerStudent
-            }
+          <div
+            className="student-register-modal"
+            style={{
+              width: "min(1180px, 100%)",
+              maxHeight: "calc(100vh - 56px)",
+              overflowY: "auto",
+              background: "#ffffff",
+              border: "1px solid #e2e8f0",
+              borderRadius: "16px",
+              boxShadow: "0 20px 60px rgba(15, 23, 42, 0.16)",
+              position: "relative",
+            }}
           >
-            <div className="formgrid">
-              <label>
-                Student Name *
-
-                <input
-                  required
-                  value={
-                    form.username
-                  }
-                  onChange={(e) =>
-                    updateField(
-                      "username",
-                      e.target.value
-                    )
-                  }
-                />
-              </label>
-
-              <label>
-                Email *
-
-                <input
-                  type="email"
-                  required
-                  value={
-                    form.email
-                  }
-                  onChange={(e) =>
-                    updateField(
-                      "email",
-                      e.target.value
-                    )
-                  }
-                />
-              </label>
-
-              <label>
-                Phone Number *
-
-                <input
-                  required
-                  value={
-                    form.phoneNumber
-                  }
-                  onChange={(e) =>
-                    updateField(
-                      "phoneNumber",
-                      e.target.value
-                    )
-                  }
-                />
-              </label>
-
-              <label>
-                Aadhaar *
-
-                <input
-                  required
-                  minLength={12}
-                  maxLength={12}
-                  value={
-                    form.aadhar
-                  }
-                  onChange={(e) =>
-                    updateField(
-                      "aadhar",
-                      e.target.value
-                    )
-                  }
-                />
-              </label>
-
-              <label>
-                Room Number *
-
-                <input
-                  required
-                  value={
-                    form.roomNo
-                  }
-                  onChange={(e) =>
-                    updateField(
-                      "roomNo",
-                      e.target.value
-                    )
-                  }
-                />
-              </label>
-
-              <label>
-                Floor
-
-                <input
-                  value={
-                    form.floor
-                  }
-                  onChange={(e) =>
-                    updateField(
-                      "floor",
-                      e.target.value
-                    )
-                  }
-                />
-              </label>
-
-              <label>
-                Capacity *
-
-                <select
-                  value={
-                    form.capacity
-                  }
-                  onChange={(e) =>
-                    updateField(
-                      "capacity",
-                      e.target.value
-                    )
-                  }
-                >
-                  <option value="2">
-                    2 Students
-                  </option>
-
-                  <option value="3">
-                    3 Students
-                  </option>
-                </select>
-              </label>
-
-              <label>
-                Room Type
-
-                <select
-                  value={form.type}
-                  onChange={(e) =>
-                    updateField(
-                      "type",
-                      e.target.value
-                    )
-                  }
-                >
-                  <option value="single">
-                    Single
-                  </option>
-
-                  <option value="double">
-                    Double
-                  </option>
-
-                  <option value="triple">
-                    Triple
-                  </option>
-                </select>
-              </label>
-
-              <label className="check">
-                <input
-                  type="checkbox"
-                  checked={
-                    form.isAC
-                  }
-                  onChange={(e) =>
-                    updateField(
-                      "isAC",
-                      e.target.checked
-                    )
-                  }
-                />
-                AC Room
-              </label>
-
-              <label>
-                Course *
-
-                <input
-                  required
-                  value={
-                    form.course
-                  }
-                  onChange={(e) =>
-                    updateField(
-                      "course",
-                      e.target.value
-                    )
-                  }
-                />
-              </label>
-
-              <label>
-                College *
-
-                <input
-                  required
-                  value={
-                    form.collegeName
-                  }
-                  onChange={(e) =>
-                    updateField(
-                      "collegeName",
-                      e.target.value
-                    )
-                  }
-                />
-              </label>
-
-              <label>
-                Year *
-
-                <select
-                  value={form.year}
-                  onChange={(e) =>
-                    updateField(
-                      "year",
-                      e.target.value
-                    )
-                  }
-                >
-                  <option value="1">
-                    1st Year
-                  </option>
-
-                  <option value="2">
-                    2nd Year
-                  </option>
-
-                  <option value="3">
-                    3rd Year
-                  </option>
-
-                  <option value="4">
-                    4th Year
-                  </option>
-
-                  <option value="5">
-                    5th Year
-                  </option>
-                </select>
-              </label>
-
-              <label>
-                Guardian Name *
-
-                <input
-                  required
-                  value={
-                    form.guardianName
-                  }
-                  onChange={(e) =>
-                    updateField(
-                      "guardianName",
-                      e.target.value
-                    )
-                  }
-                />
-              </label>
-
-              <label>
-                Guardian Phone *
-
-                <input
-                  required
-                  value={
-                    form.guardianPhone
-                  }
-                  onChange={(e) =>
-                    updateField(
-                      "guardianPhone",
-                      e.target.value
-                    )
-                  }
-                />
-              </label>
-
-              <label>
-                Registration Fee *
-
-                <input
-                  type="number"
-                  min="0"
-                  required
-                  value={
-                    form.registrationFee
-                  }
-                  onChange={(e) =>
-                    updateField(
-                      "registrationFee",
-                      e.target.value
-                    )
-                  }
-                />
-              </label>
-
-              <label>
-                Total Hostel Fee *
-
-                <input
-                  type="number"
-                  min="1"
-                  step="0.01"
-                  required
-                  value={
-                    form.totalFee
-                  }
-                  onChange={(e) =>
-                    updateField(
-                      "totalFee",
-                      e.target.value
-                    )
-                  }
-                  placeholder="Enter total hostel fee"
-                />
-
-                <small className="muted">
-                  The backend will divide this into 4 installments.
-                </small>
-              </label>
-
-              <label>
-                Profile Picture URL
-
-                <input
-                  type="url"
-                  value={
-                    form.profilePic
-                  }
-                  onChange={(e) =>
-                    updateField(
-                      "profilePic",
-                      e.target.value
-                    )
-                  }
-                />
-              </label>
-            </div>
-
-            <h3>Address</h3>
-
-            <div className="formgrid">
-              <label>
-                City *
-
-                <input
-                  required
-                  value={
-                    form.address.city
-                  }
-                  onChange={(e) =>
-                    updateAddress(
-                      "city",
-                      e.target.value
-                    )
-                  }
-                />
-              </label>
-
-              <label>
-                State *
-
-                <input
-                  required
-                  value={
-                    form.address.state
-                  }
-                  onChange={(e) =>
-                    updateAddress(
-                      "state",
-                      e.target.value
-                    )
-                  }
-                />
-              </label>
-
-              <label>
-                Pincode *
-
-                <input
-                  required
-                  minLength={6}
-                  maxLength={6}
-                  value={
-                    form.address
-                      .pincode
-                  }
-                  onChange={(e) =>
-                    updateAddress(
-                      "pincode",
-                      e.target.value
-                    )
-                  }
-                />
-              </label>
-            </div>
-
-            {error && (
-              <ErrorBox>
-                {error}
-              </ErrorBox>
-            )}
-
             <button
-              className="primary full"
-              disabled={loading}
+              type="button"
+              onClick={() => setShowRegister(false)}
+              aria-label="Close"
+              style={{
+                position: "absolute",
+                top: "18px",
+                right: "18px",
+                width: "38px",
+                height: "38px",
+                border: "none",
+                borderRadius: "10px",
+                background: "#f1f5f9",
+                color: "#0f172a",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                zIndex: 2,
+              }}
             >
-              {loading
-                ? "Registering..."
-                : "Register Student"}
+              <X size={19} />
             </button>
-          </form>
-        </Modal>
+
+            <div
+              style={{
+                padding: "28px 32px 22px",
+                borderBottom: "1px solid #eef2f7",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  color: "#64748b",
+                  marginBottom: "6px",
+                }}
+              >
+                Student Registration
+              </div>
+              <h2
+                style={{
+                  margin: 0,
+                  paddingRight: "55px",
+                  fontSize: "27px",
+                  lineHeight: 1.2,
+                  color: "#0f172a",
+                }}
+              >
+                Register New Student
+              </h2>
+              <p
+                style={{
+                  margin: "8px 0 0",
+                  color: "#64748b",
+                  fontSize: "14px",
+                }}
+              >
+                Add a student with room, academic, guardian and fee details.
+              </p>
+            </div>
+
+            <div
+              className="student-register-layout"
+              style={{
+                display: "grid",
+                gridTemplateColumns: "250px minmax(0, 1fr)",
+              }}
+            >
+              <div
+                style={{
+                  padding: "28px 22px",
+                  background: "#f8fafc",
+                  borderRight: "1px solid #e2e8f0",
+                }}
+              >
+                <div
+                  style={{
+                    width: "58px",
+                    height: "58px",
+                    borderRadius: "14px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "#e2e8f0",
+                    color: "#334155",
+                    marginBottom: "18px",
+                  }}
+                >
+                  <UserRound size={28} />
+                </div>
+
+                <h3
+                  style={{
+                    margin: "0 0 8px",
+                    fontSize: "18px",
+                    color: "#0f172a",
+                  }}
+                >
+                  Student profile
+                </h3>
+
+                <p
+                  style={{
+                    margin: "0 0 24px",
+                    color: "#64748b",
+                    fontSize: "13px",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  Enter the student's personal information, hostel allocation,
+                  academic details and fee information.
+                </p>
+
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "14px",
+                  }}
+                >
+                  {[
+                    ["01", "Personal information"],
+                    ["02", "Hostel allocation"],
+                    ["03", "Academic & guardian"],
+                    ["04", "Fees & address"],
+                  ].map(([number, text]) => (
+                    <div
+                      key={number}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "11px",
+                        color: "#475569",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: "28px",
+                          height: "28px",
+                          minWidth: "28px",
+                          borderRadius: "8px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          background: "#ffffff",
+                          border: "1px solid #e2e8f0",
+                          fontSize: "11px",
+                          color: "#64748b",
+                        }}
+                      >
+                        {number}
+                      </span>
+                      {text}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <form onSubmit={registerStudent}>
+                <div
+                  style={{
+                    padding: "24px 28px",
+                    borderBottom: "1px solid #eef2f7",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "11px",
+                      marginBottom: "18px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "36px",
+                        height: "36px",
+                        minWidth: "36px",
+                        borderRadius: "9px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        background: "#f1f5f9",
+                        color: "#475569",
+                      }}
+                    >
+                      <UserRound size={18} />
+                    </div>
+                    <div>
+                      <h3
+                        style={{
+                          margin: 0,
+                          color: "#0f172a",
+                          fontSize: "16px",
+                        }}
+                      >
+                        Personal information
+                      </h3>
+                      <p
+                        style={{
+                          margin: "4px 0 0",
+                          color: "#94a3b8",
+                          fontSize: "12px",
+                        }}
+                      >
+                        Basic details and contact information
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="student-register-grid-2">
+                    <label className="student-register-label">
+                      Student Name <span>*</span>
+                      <input
+                        required
+                        value={form.username}
+                        onChange={(e) =>
+                          updateField("username", e.target.value)
+                        }
+                        placeholder="Enter student name"
+                      />
+                    </label>
+
+                    <label className="student-register-label">
+                      Profile Picture URL
+                      <input
+                        type="url"
+                        value={form.profilePic}
+                        onChange={(e) =>
+                          updateField("profilePic", e.target.value)
+                        }
+                        placeholder="https://..."
+                      />
+                    </label>
+
+                    <label className="student-register-label">
+                      Email <span>*</span>
+                      <input
+                        type="email"
+                        required
+                        value={form.email}
+                        onChange={(e) =>
+                          updateField("email", e.target.value)
+                        }
+                        placeholder="student@example.com"
+                      />
+                    </label>
+
+                    <label className="student-register-label">
+                      Phone Number <span>*</span>
+                      <input
+                        required
+                        type="tel"
+                        inputMode="numeric"
+                        maxLength={10}
+                        value={form.phoneNumber}
+                        onChange={(e) =>
+                          updateField(
+                            "phoneNumber",
+                            e.target.value.replace(/\D/g, "")
+                          )
+                        }
+                        placeholder="10 digit phone number"
+                      />
+                    </label>
+
+                    <label className="student-register-label">
+                      Aadhaar Number <span>*</span>
+                      <input
+                        required
+                        type="text"
+                        inputMode="numeric"
+                        minLength={12}
+                        maxLength={12}
+                        value={form.aadhar}
+                        onChange={(e) =>
+                          updateField(
+                            "aadhar",
+                            e.target.value.replace(/\D/g, "")
+                          )
+                        }
+                        placeholder="12 digit Aadhaar number"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    padding: "24px 28px",
+                    borderBottom: "1px solid #eef2f7",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "11px",
+                      marginBottom: "18px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "36px",
+                        height: "36px",
+                        minWidth: "36px",
+                        borderRadius: "9px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        background: "#f1f5f9",
+                        color: "#475569",
+                      }}
+                    >
+                      <BedDouble size={18} />
+                    </div>
+                    <div>
+                      <h3
+                        style={{
+                          margin: 0,
+                          color: "#0f172a",
+                          fontSize: "16px",
+                        }}
+                      >
+                        Hostel allocation
+                      </h3>
+                      <p
+                        style={{
+                          margin: "4px 0 0",
+                          color: "#94a3b8",
+                          fontSize: "12px",
+                        }}
+                      >
+                        Assign the student's room and accommodation type
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="student-register-grid-2">
+                    <label className="student-register-label">
+                      Room Number <span>*</span>
+                      <input
+                        required
+                        value={form.roomNo}
+                        onChange={(e) =>
+                          updateField("roomNo", e.target.value)
+                        }
+                        placeholder="e.g. B515"
+                      />
+                    </label>
+
+                    <label className="student-register-label">
+                      Floor
+                      <input
+                        value={form.floor}
+                        onChange={(e) =>
+                          updateField("floor", e.target.value)
+                        }
+                        placeholder="e.g. 5th Floor"
+                      />
+                    </label>
+
+                    <label className="student-register-label">
+                      Capacity <span>*</span>
+                      <select
+                        value={form.capacity}
+                        onChange={(e) =>
+                          updateField("capacity", e.target.value)
+                        }
+                      >
+                        <option value="2">2 Students</option>
+                        <option value="3">3 Students</option>
+                      </select>
+                    </label>
+
+                    <label className="student-register-label">
+                      Room Type
+                      <select
+                        value={form.type}
+                        onChange={(e) =>
+                          updateField("type", e.target.value)
+                        }
+                      >
+                        <option value="single">Single</option>
+                        <option value="double">Double</option>
+                        <option value="triple">Triple</option>
+                      </select>
+                    </label>
+
+                    <label
+                      className="student-register-check"
+                      style={{
+                        minHeight: "44px",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={form.isAC}
+                        onChange={(e) =>
+                          updateField("isAC", e.target.checked)
+                        }
+                      />
+                      <span>AC Room</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    padding: "24px 28px",
+                    borderBottom: "1px solid #eef2f7",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "11px",
+                      marginBottom: "18px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "36px",
+                        height: "36px",
+                        minWidth: "36px",
+                        borderRadius: "9px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        background: "#f1f5f9",
+                        color: "#475569",
+                      }}
+                    >
+                      <ShieldCheck size={18} />
+                    </div>
+                    <div>
+                      <h3
+                        style={{
+                          margin: 0,
+                          color: "#0f172a",
+                          fontSize: "16px",
+                        }}
+                      >
+                        Academic & guardian
+                      </h3>
+                      <p
+                        style={{
+                          margin: "4px 0 0",
+                          color: "#94a3b8",
+                          fontSize: "12px",
+                        }}
+                      >
+                        College, course, year and emergency contact details
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="student-register-grid-2">
+                    <label className="student-register-label">
+                      Course <span>*</span>
+                      <input
+                        required
+                        value={form.course}
+                        onChange={(e) =>
+                          updateField("course", e.target.value)
+                        }
+                        placeholder="e.g. B.Tech CSE"
+                      />
+                    </label>
+
+                    <label className="student-register-label">
+                      College <span>*</span>
+                      <input
+                        required
+                        value={form.collegeName}
+                        onChange={(e) =>
+                          updateField("collegeName", e.target.value)
+                        }
+                        placeholder="Enter college name"
+                      />
+                    </label>
+
+                    <label className="student-register-label">
+                      Year <span>*</span>
+                      <select
+                        value={form.year}
+                        onChange={(e) =>
+                          updateField("year", e.target.value)
+                        }
+                      >
+                        <option value="1">1st Year</option>
+                        <option value="2">2nd Year</option>
+                        <option value="3">3rd Year</option>
+                        <option value="4">4th Year</option>
+                        <option value="5">5th Year</option>
+                      </select>
+                    </label>
+
+                    <label className="student-register-label">
+                      Guardian Name <span>*</span>
+                      <input
+                        required
+                        value={form.guardianName}
+                        onChange={(e) =>
+                          updateField("guardianName", e.target.value)
+                        }
+                        placeholder="Enter guardian name"
+                      />
+                    </label>
+
+                    <label className="student-register-label">
+                      Guardian Phone <span>*</span>
+                      <input
+                        required
+                        type="tel"
+                        inputMode="numeric"
+                        maxLength={10}
+                        value={form.guardianPhone}
+                        onChange={(e) =>
+                          updateField(
+                            "guardianPhone",
+                            e.target.value.replace(/\D/g, "")
+                          )
+                        }
+                        placeholder="10 digit phone number"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    padding: "24px 28px 28px",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "11px",
+                      marginBottom: "18px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "36px",
+                        height: "36px",
+                        minWidth: "36px",
+                        borderRadius: "9px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        background: "#f1f5f9",
+                        color: "#475569",
+                      }}
+                    >
+                      <IndianRupee size={18} />
+                    </div>
+                    <div>
+                      <h3
+                        style={{
+                          margin: 0,
+                          color: "#0f172a",
+                          fontSize: "16px",
+                        }}
+                      >
+                        Fees & address
+                      </h3>
+                      <p
+                        style={{
+                          margin: "4px 0 0",
+                          color: "#94a3b8",
+                          fontSize: "12px",
+                        }}
+                      >
+                        Fee structure and residential address
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="student-register-grid-2">
+                    <label className="student-register-label">
+                      Registration Fee <span>*</span>
+                      <input
+                        type="number"
+                        min="0"
+                        required
+                        value={form.registrationFee}
+                        onChange={(e) =>
+                          updateField("registrationFee", e.target.value)
+                        }
+                        placeholder="0"
+                      />
+                    </label>
+
+                    <label className="student-register-label">
+                      Total Hostel Fee <span>*</span>
+                      <input
+                        type="number"
+                        min="1"
+                        step="0.01"
+                        required
+                        value={form.totalFee}
+                        onChange={(e) =>
+                          updateField("totalFee", e.target.value)
+                        }
+                        placeholder="Enter total hostel fee"
+                      />
+                      <small
+                        style={{
+                          color: "#64748b",
+                          fontSize: "12px",
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        The backend will divide this into 4 installments.
+                      </small>
+                    </label>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "11px",
+                      margin: "24px 0 18px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "36px",
+                        height: "36px",
+                        minWidth: "36px",
+                        borderRadius: "9px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        background: "#f1f5f9",
+                        color: "#475569",
+                      }}
+                    >
+                      <MapPin size={18} />
+                    </div>
+                    <div>
+                      <h3
+                        style={{
+                          margin: 0,
+                          color: "#0f172a",
+                          fontSize: "16px",
+                        }}
+                      >
+                        Address details
+                      </h3>
+                      <p
+                        style={{
+                          margin: "4px 0 0",
+                          color: "#94a3b8",
+                          fontSize: "12px",
+                        }}
+                      >
+                        Current residential address
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="student-register-grid-address">
+                    <label className="student-register-label">
+                      Village <span>*</span>
+                      <input
+                        required
+                        value={form.address.village}
+                        onChange={(e) =>
+                          updateAddress("village", e.target.value)
+                        }
+                        placeholder="Enter village"
+                      />
+                    </label>
+
+                    <label className="student-register-label">
+                      City <span>*</span>
+                      <input
+                        required
+                        value={form.address.city}
+                        onChange={(e) =>
+                          updateAddress("city", e.target.value)
+                        }
+                        placeholder="Enter city"
+                      />
+                    </label>
+
+                    <label className="student-register-label">
+                      State <span>*</span>
+                      <input
+                        required
+                        value={form.address.state}
+                        onChange={(e) =>
+                          updateAddress("state", e.target.value)
+                        }
+                        placeholder="Enter state"
+                      />
+                    </label>
+
+                    <label className="student-register-label">
+                      Pincode <span>*</span>
+                      <input
+                        required
+                        type="text"
+                        inputMode="numeric"
+                        minLength={6}
+                        maxLength={6}
+                        value={form.address.pincode}
+                        onChange={(e) =>
+                          updateAddress(
+                            "pincode",
+                            e.target.value.replace(/\D/g, "")
+                          )
+                        }
+                        placeholder="6 digit pincode"
+                      />
+                    </label>
+                  </div>
+
+                  {error && (
+                    <div style={{ marginTop: "18px" }}>
+                      <ErrorBox>{error}</ErrorBox>
+                    </div>
+                  )}
+
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "flex-end",
+                      gap: "12px",
+                      marginTop: "24px",
+                      paddingTop: "20px",
+                      borderTop: "1px solid #eef2f7",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForm({
+                          ...emptyForm,
+                          address: {
+                            ...emptyForm.address,
+                          },
+                        });
+                        setError("");
+                      }}
+                      disabled={loading}
+                      style={{
+                        border: "1px solid #e2e8f0",
+                        background: "#ffffff",
+                        color: "#475569",
+                        borderRadius: "10px",
+                        padding: "11px 18px",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        cursor: loading ? "not-allowed" : "pointer",
+                      }}
+                    >
+                      Clear
+                    </button>
+
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      style={{
+                        border: "none",
+                        background: "#0f172a",
+                        color: "#ffffff",
+                        borderRadius: "10px",
+                        padding: "11px 20px",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        cursor: loading ? "not-allowed" : "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        opacity: loading ? 0.7 : 1,
+                      }}
+                    >
+                      <Check size={16} />
+                      {loading ? "Registering..." : "Register Student"}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <style>{`
+            .student-register-label {
+              display: flex;
+              flex-direction: column;
+              gap: 7px;
+              font-size: 13px;
+              font-weight: 600;
+              color: #334155;
+            }
+
+            .student-register-label > span {
+              color: #ef4444;
+              margin-left: 2px;
+            }
+
+            .student-register-label input,
+            .student-register-label select {
+              width: 100%;
+              box-sizing: border-box;
+              min-height: 44px;
+              border: 1px solid #e2e8f0;
+              border-radius: 10px;
+              padding: 11px 13px;
+              font-size: 14px;
+              color: #0f172a;
+              background: #ffffff;
+              outline: none;
+            }
+
+            .student-register-label input::placeholder {
+              color: #94a3b8;
+            }
+
+            .student-register-label input:focus,
+            .student-register-label select:focus {
+              border-color: #94a3b8;
+              box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.14);
+            }
+
+            .student-register-grid-2 {
+              display: grid;
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+              gap: 18px;
+            }
+
+            .student-register-grid-address {
+              display: grid;
+              grid-template-columns: 1fr 1fr 1fr .8fr;
+              gap: 18px;
+            }
+
+            .student-register-check {
+              display: flex;
+              align-items: center;
+              gap: 9px;
+              font-size: 13px;
+              font-weight: 600;
+              color: #334155;
+              cursor: pointer;
+            }
+
+            .student-register-check input {
+              width: 16px;
+              height: 16px;
+              accent-color: #0f172a;
+            }
+
+            @media (max-width: 900px) {
+              .student-register-layout {
+                grid-template-columns: 1fr !important;
+              }
+
+              .student-register-layout > div:first-child {
+                border-right: none !important;
+                border-bottom: 1px solid #e2e8f0;
+              }
+            }
+
+            @media (max-width: 650px) {
+              .student-register-modal {
+                border-radius: 12px !important;
+              }
+
+              .student-register-grid-2,
+              .student-register-grid-address {
+                grid-template-columns: 1fr !important;
+              }
+            }
+          `}</style>
+        </div>
       )}
     </>
   );
@@ -2452,6 +3951,7 @@ function StudentDetails() {
       profilePic: "",
       aadhar: "",
       address: {
+        village: "",
         city: "",
         state: "",
         pincode: "",
@@ -2608,6 +4108,9 @@ function StudentDetails() {
           : aadhar,
 
       address: {
+        village:
+          address.village || "",
+
         city:
           address.city || "",
 
@@ -2737,6 +4240,9 @@ function StudentDetails() {
             form.aadhar,
 
           address: {
+            village:
+              form.address.village,
+
             city:
               form.address.city,
 
@@ -2923,6 +4429,14 @@ function StudentDetails() {
       <Card title="Address">
         <div className="details-grid">
           <div>
+            <span>Village</span>
+            <strong>
+              {address.village ||
+                "—"}
+            </strong>
+          </div>
+
+          <div>
             <span>City</span>
             <strong>
               {address.city ||
@@ -3082,7 +4596,7 @@ function StudentDetails() {
                 </div>
 
                 <div
-                  className="details-grid"
+                  className="details-grid fee-installments-grid"
                 >
                   {(fee.installments || []).map(
                     (installment, index) => {
@@ -3351,6 +4865,21 @@ function StudentDetails() {
             <h3>Address</h3>
 
             <div className="formgrid">
+              <label>
+                Village
+                <input
+                  value={
+                    form.address.village
+                  }
+                  onChange={(e) =>
+                    updateAddress(
+                      "village",
+                      e.target.value
+                    )
+                  }
+                />
+              </label>
+
               <label>
                 City
                 <input
@@ -3790,275 +5319,116 @@ function Rooms() {
    FEES
 ========================================================= */
 
-function Fees({
-  student = false,
-}) {
-  const [data, setData] =
-    useState(null);
-
-  const [error, setError] =
-    useState("");
+function Fees({ student = false }) {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const request = student
       ? studentApi.fees()
-      : adminApi.pendingFees({
-          page: 1,
-          limit: 50,
-        });
+      : adminApi.pendingFees({ page: 1, limit: 50 });
 
     request
-      .then((response) =>
-        setData(response.data || {})
-      )
+      .then((response) => setData(response.data || {}))
       .catch((e) => {
         if (e.response?.status === 404) {
-          setData({
-            totalPendingFees: 0,
-            totalPendingRecords: 0,
-            totalPages: 0,
-            currentPage: 1,
-            hasNextPage: false,
-            hasPrevPage: false,
-            pendingFees: [],
-            fees: [],
-            totalPending: 0,
-          });
-          setError("");
+          setData({ totalPendingFees: 0, totalPendingRecords: 0, pendingFees: [], fees: [], totalPending: 0 });
           return;
         }
-
-        setError(
-          e.response?.data?.message ||
-            "No fees found"
-        );
+        setError(e.response?.data?.message || "No fees found");
       });
   }, [student]);
 
-  if (error) {
-    return (
-      <ErrorBox>
-        {error}
-      </ErrorBox>
-    );
-  }
+  if (error) return <ErrorBox>{error}</ErrorBox>;
+  if (!data) return <Loading />;
 
-  if (!data) {
-    return <Loading />;
-  }
-
-  const rows = student
-    ? data.fees || []
-    : data.pendingFees || [];
-
-  const pendingTotal = student
-    ? Number(data.totalPending || 0)
-    : Number(data.totalPendingFees || 0);
+  const rows = student ? data.fees || [] : data.pendingFees || [];
+  const pendingTotal = student ? Number(data.totalPending || 0) : Number(data.totalPendingFees || 0);
 
   return (
     <>
-      <div className="toolbar">
-        <div>
-          <h1>
-            {student
-              ? "My Fees"
-              : "Pending Fees"}
-          </h1>
+      <style>{`
+        .fees-page { max-width: 1180px; margin: 0 auto; }
+        .fees-hero { margin-bottom: 26px; }
+        .fees-hero .eyebrow { margin:0 0 8px; color:#7183a0; font-size:14px; font-weight:600; }
+        .fees-hero h1 { margin:0; color:#10233f; font-size:clamp(34px,4vw,46px); letter-spacing:-1.4px; }
+        .fees-hero p:last-child { margin:10px 0 0; color:#64748b; }
+        .fees-summary { display:grid; grid-template-columns:repeat(2,minmax(0,260px)); gap:16px; margin-bottom:24px; }
+        .fees-summary-card { display:flex; align-items:center; gap:15px; padding:20px; border:1px solid #e2e8f0; border-radius:18px; background:#fff; box-shadow:0 8px 24px rgba(15,23,42,.05); }
+        .fees-summary-icon { width:48px;height:48px;display:grid;place-items:center;border-radius:14px;background:#eef0ff;color:#4f46e5; }
+        .fees-summary-card span { display:block;color:#7183a0;font-size:13px;margin-bottom:4px; }
+        .fees-summary-card strong { color:#10233f;font-size:24px; }
+        .fees-record-card { overflow:hidden;border:1px solid #e2e8f0;border-radius:20px;background:#fff;box-shadow:0 10px 28px rgba(15,23,42,.05); }
+        .fees-record-head { padding:22px 26px;border-bottom:1px solid #edf1f5; }
+        .fees-record-head h2 { margin:0;color:#10233f;font-size:20px; }
+        .fees-table { width:100%; overflow-x:auto; }
+        .fees-table table { width:100%; min-width:760px; border-collapse:collapse; }
+        .fees-table th { padding:15px 20px;text-align:left;color:#7183a0;font-size:11px;letter-spacing:.7px;text-transform:uppercase;border-bottom:1px solid #e8edf3; }
+        .fees-table td { padding:18px 20px;color:#172b46;border-bottom:1px solid #edf1f5;vertical-align:top; }
+        .fees-table tr:last-child td { border-bottom:0; }
+        .fee-pill { display:inline-flex;align-items:center;justify-content:center;margin:0 6px 6px 0;padding:7px 9px;border-radius:8px;background:#f4f6fa;color:#52637c;font-size:12px;line-height:1.2;white-space:normal;max-width:100%;box-sizing:border-box;overflow-wrap:anywhere; }
+        .fee-paid { color:#277449;font-weight:700; }
+        .fee-pending { color:#b45309;font-weight:700; }
+        @media(max-width:700px){
+          .fees-page { width:100%; max-width:100%; min-width:0; box-sizing:border-box; }
+          .fees-summary { grid-template-columns:1fr; width:100%; }
+          .fees-summary-card { min-width:0; width:100%; box-sizing:border-box; }
+          .fees-record-card { width:100%; max-width:100%; min-width:0; box-sizing:border-box; overflow:hidden; }
+          .fees-record-head { padding:18px 16px; }
+          .fees-table { width:100% !important; max-width:100% !important; overflow:visible !important; min-width:0 !important; box-sizing:border-box; }
+          .fees-table .table-wrap { width:100% !important; max-width:100% !important; overflow:visible !important; min-width:0 !important; }
+          .fees-table table { width:100% !important; min-width:0 !important; max-width:100% !important; table-layout:fixed !important; }
+          .fees-table tbody td { min-width:0 !important; max-width:100% !important; overflow-wrap:anywhere !important; word-break:break-word !important; }
+          .fees-table tbody td > div { min-width:0; max-width:100%; display:flex; flex-wrap:wrap; gap:4px; }
+          .fees-table .fee-pill { margin:0 2px 4px 0; padding:6px 8px; font-size:11px; max-width:100%; }
+        }
+      `}</style>
 
-          <p className="muted">
-            {student
-              ? "View your fee structures and installments."
-              : "Students with outstanding installments."}
-          </p>
+      <div className="fees-page">
+        <div className="fees-hero">
+          <p className="eyebrow">Hostel Finance</p>
+          <h1>{student ? "My Fees" : "Pending Fees"}</h1>
+          <p>{student ? "View your fee structures and installment status." : "Review students with outstanding installments."}</p>
+        </div>
+
+        <div className="fees-summary">
+          <div className="fees-summary-card">
+            <div className="fees-summary-icon"><IndianRupee size={22} /></div>
+            <div><span>{student ? "My Pending Fees" : "Total Pending Fees"}</span><strong>₹{pendingTotal.toLocaleString("en-IN")}</strong></div>
+          </div>
+          {!student && (
+            <div className="fees-summary-card">
+              <div className="fees-summary-icon"><IndianRupee size={22} /></div>
+              <div><span>Pending Fee Records</span><strong>{Number(data.totalPendingRecords) || rows.length}</strong></div>
+            </div>
+          )}
+        </div>
+
+        <div className="fees-record-card">
+          <div className="fees-record-head"><h2>Fee Records</h2></div>
+          <div className="fees-table">
+            <Table
+              columns={student ? [
+                { key:"feeType", label:"Type" },
+                { key:"totalAmount", label:"Total", render:(fee)=>`₹${Number(fee.totalAmount||0).toLocaleString("en-IN")}` },
+                { key:"totalPaid", label:"Paid", render:(fee)=>`₹${Number(fee.totalPaid||0).toLocaleString("en-IN")}` },
+                { key:"installments", label:"Installments", render:(fee)=><div>{(fee.installments||[]).map(i=><span className={`fee-pill ${String(i.status).toLowerCase()==="paid"?"fee-paid":"fee-pending"}`} key={i._id}>₹{Number(i.amount||0).toLocaleString("en-IN")} · {i.status}</span>)}</div> },
+              ] : [
+                { key:"studentId", label:"Student", render:(fee)=>fee.studentId?.userId?.username||"—" },
+                { key:"studentId", label:"Email", render:(fee)=>fee.studentId?.userId?.email||"—" },
+                { key:"feeType", label:"Type" },
+                { key:"installments", label:"Pending Amount", render:(fee)=>{ const amount=(fee.installments||[]).reduce((t,i)=>String(i.status).toLowerCase()==="pending"?t+Number(i.amount||0):t,0); return `₹${amount.toLocaleString("en-IN")}`; } },
+                { key:"installments", label:"Pending Installments", render:(fee)=>{ const pending=(fee.installments||[]).filter(i=>String(i.status).toLowerCase()==="pending"); return pending.length ? <div>{pending.map(i=><span className="fee-pill fee-pending" key={i._id}>₹{Number(i.amount||0).toLocaleString("en-IN")}</span>)}</div> : "—"; } },
+              ]}
+              rows={rows}
+            />
+          </div>
         </div>
       </div>
-
-      <div className="stats">
-        <Stat
-          label={
-            student
-              ? "My Pending Fees"
-              : "Total Pending Fees"
-          }
-          value={`₹${pendingTotal.toLocaleString(
-            "en-IN"
-          )}`}
-          icon={IndianRupee}
-        />
-
-        {!student && (
-          <Stat
-            label="Pending Fee Records"
-            value={
-              Number(
-                data.totalPendingRecords
-              ) || rows.length
-            }
-            icon={IndianRupee}
-          />
-        )}
-      </div>
-
-      <Card title="Fee Records">
-        <Table
-          columns={
-            student
-              ? [
-                  {
-                    key: "feeType",
-                    label: "Type",
-                  },
-                  {
-                    key: "totalAmount",
-                    label: "Total",
-                    render: (fee) =>
-                      `₹${Number(
-                        fee.totalAmount || 0
-                      ).toLocaleString("en-IN")}`,
-                  },
-                  {
-                    key: "totalPaid",
-                    label: "Paid",
-                    render: (fee) =>
-                      `₹${Number(
-                        fee.totalPaid || 0
-                      ).toLocaleString("en-IN")}`,
-                  },
-                  {
-                    key: "installments",
-                    label: "Installments",
-                    render: (fee) => (
-                      <div>
-                        {(fee.installments || []).map(
-                          (installment) => (
-                            <span
-                              className="installment"
-                              key={
-                                installment._id
-                              }
-                            >
-                              ₹
-                              {Number(
-                                installment.amount ||
-                                  0
-                              ).toLocaleString(
-                                "en-IN"
-                              )}{" "}
-                              ·{" "}
-                              {installment.status}
-                            </span>
-                          )
-                        )}
-                      </div>
-                    ),
-                  },
-                ]
-              : [
-                  {
-                    key: "studentId",
-                    label: "Student",
-                    render: (fee) =>
-                      fee.studentId
-                        ?.userId
-                        ?.username ||
-                      "—",
-                  },
-                  {
-                    key: "studentId",
-                    label: "Email",
-                    render: (fee) =>
-                      fee.studentId
-                        ?.userId
-                        ?.email ||
-                      "—",
-                  },
-                  {
-                    key: "feeType",
-                    label: "Type",
-                  },
-                  {
-                    key: "installments",
-                    label: "Pending Amount",
-                    render: (fee) => {
-                      const pendingAmount =
-                        (
-                          fee.installments ||
-                          []
-                        ).reduce(
-                          (
-                            total,
-                            installment
-                          ) =>
-                            String(
-                              installment.status
-                            ).toLowerCase() ===
-                            "pending"
-                              ? total +
-                                Number(
-                                  installment.amount ||
-                                    0
-                                )
-                              : total,
-                          0
-                        );
-
-                      return `₹${pendingAmount.toLocaleString(
-                        "en-IN"
-                      )}`;
-                    },
-                  },
-                  {
-                    key: "installments",
-                    label: "Pending Installments",
-                    render: (fee) => {
-                      const pending =
-                        (
-                          fee.installments ||
-                          []
-                        ).filter(
-                          (installment) =>
-                            String(
-                              installment.status
-                            ).toLowerCase() ===
-                            "pending"
-                        );
-
-                      if (!pending.length) {
-                        return "—";
-                      }
-
-                      return (
-                        <div>
-                          {pending.map(
-                            (installment) => (
-                              <span
-                                className="installment"
-                                key={
-                                  installment._id
-                                }
-                              >
-                                ₹
-                                {Number(
-                                  installment.amount ||
-                                    0
-                                ).toLocaleString(
-                                  "en-IN"
-                                )}
-                              </span>
-                            )
-                          )}
-                        </div>
-                      );
-                    },
-                  },
-                ]
-          }
-          rows={rows}
-        />
-      </Card>
     </>
   );
 }
+
 
 /* =========================================================
    COMPLAINTS
@@ -4530,429 +5900,95 @@ function Complaints({
    MESS
 ========================================================= */
 
-function Mess({
-  student = false,
-}) {
-  const [data, setData] =
-    useState(null);
+function Mess({ student = false }) {
+  const [data, setData] = useState(null);
+  const [show, setShow] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [error, setError] = useState("");
 
-  const [show, setShow] =
-    useState(false);
-
-  const [editing, setEditing] =
-    useState(null);
-
-  const [error, setError] =
-    useState("");
-
-  const emptyForm = {
-    day: "Monday",
-    type: "veg",
-    breakfast: "",
-    lunch: "",
-    snacks: "",
-    dinner: "",
-  };
-
-  const [form, setForm] =
-    useState(emptyForm);
+  const emptyForm = { day:"Monday", type:"veg", breakfast:"", lunch:"", snacks:"", dinner:"" };
+  const [form, setForm] = useState(emptyForm);
 
   function load() {
-    const request = student
-      ? studentApi.menu()
-      : adminApi.menu({
-          page: 1,
-          limit: 50,
-        });
-
-    request
-      .then((response) =>
-        setData(response.data)
-      )
-      .catch((e) =>
-        setError(
-          e.response?.data?.message ||
-            "Menu unavailable"
-        )
-      );
+    const request = student ? studentApi.menu() : adminApi.menu({ page:1, limit:50 });
+    request.then((response)=>setData(response.data)).catch((e)=>setError(e.response?.data?.message||"Menu unavailable"));
   }
+  useEffect(()=>{ load(); },[student]);
 
-  useEffect(() => {
-    load();
-  }, [student]);
+  const arrayToString=(value)=>Array.isArray(value)?value.join(", "):value||"";
+  const stringToArray=(value)=>value.split(",").map((item)=>item.trim()).filter(Boolean);
 
-  function arrayToString(
-    value
-  ) {
-    return Array.isArray(value)
-      ? value.join(", ")
-      : value || "";
-  }
-
-  function stringToArray(
-    value
-  ) {
-    return value
-      .split(",")
-      .map((item) =>
-        item.trim()
-      )
-      .filter(Boolean);
-  }
-
-  async function submit(e) {
+  async function submit(e){
     e.preventDefault();
-
-    const menuData = {
-      breakfast:
-        stringToArray(
-          form.breakfast
-        ),
-      lunch:
-        stringToArray(
-          form.lunch
-        ),
-      snacks:
-        stringToArray(
-          form.snacks
-        ),
-      dinner:
-        stringToArray(
-          form.dinner
-        ),
-    };
-
-    try {
-      if (editing) {
-        await adminApi.updateMenu(
-          editing.day,
-          editing.type,
-          menuData
-        );
-      } else {
-        await adminApi.createMenu({
-          day: form.day,
-          type: form.type,
-          ...menuData,
-        });
-      }
-
-      setShow(false);
-      setEditing(null);
-
-      load();
-    } catch (e) {
-      setError(
-        e.response?.data?.message ||
-          "Failed to save menu"
-      );
-    }
+    const menuData={ breakfast:stringToArray(form.breakfast), lunch:stringToArray(form.lunch), snacks:stringToArray(form.snacks), dinner:stringToArray(form.dinner) };
+    try{
+      if(editing) await adminApi.updateMenu(editing.day, editing.type, menuData);
+      else await adminApi.createMenu({day:form.day,type:form.type,...menuData});
+      setShow(false); setEditing(null); load();
+    }catch(e){ setError(e.response?.data?.message||"Failed to save menu"); }
   }
 
-  const menus =
-    data?.menu ||
-    data?.menus ||
-    [];
+  const menus=data?.menu||data?.menus||[];
 
   return (
     <>
-      {student && <LunchBoxBooking />}
+      <style>{`
+        .mess-page{max-width:1180px;margin:0 auto;}
+        .mess-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:26px;}
+        .mess-hero h1{margin:0;color:#10233f;font-size:clamp(34px,4vw,46px);letter-spacing:-1.4px;}
+        .mess-hero p{margin:9px 0 0;color:#64748b;}
+        .mess-menu-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;}
+        .mess-menu-card{overflow:hidden;border:1px solid #e2e8f0;border-radius:20px;background:#fff;box-shadow:0 9px 26px rgba(15,23,42,.05);}
+        .mess-menu-head{padding:20px 22px;border-bottom:1px solid #edf1f5;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+        .mess-menu-head h2{margin:0;color:#10233f;font-size:19px;}
+        .mess-type{padding:6px 9px;border-radius:999px;background:#f0efff;color:#4f46e5;font-size:11px;font-weight:800;text-transform:uppercase;}
+        .mess-edit{padding:6px 9px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;color:#52637c;cursor:pointer;}
+        .mess-meals{padding:19px 22px 22px;}
+        .mess-meal{padding:13px 0;border-bottom:1px solid #edf1f5;}
+        .mess-meal:last-child{border-bottom:0;padding-bottom:0;}
+        .mess-meal:first-child{padding-top:0;}
+        .mess-meal small{display:block;margin-bottom:5px;color:#7183a0;font-size:10px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;}
+        .mess-meal p{margin:0;color:#172b46;line-height:1.5;}
+        .mess-empty{grid-column:1/-1;}
+        @media(max-width:950px){.mess-menu-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+        @media(max-width:620px){.mess-menu-grid{grid-template-columns:1fr;}.mess-hero{align-items:flex-start;flex-direction:column;}}
+      `}</style>
 
-      <div className="toolbar">
-        <div>
-          <h1>Mess Menu</h1>
+      <div className="mess-page">
+        {student && <LunchBoxBooking />}
 
-          <p className="muted">
-            Weekly breakfast,
-            lunch, snacks and
-            dinner.
-          </p>
+        <div className="mess-hero">
+          <div><h1>Mess Menu</h1><p>Weekly breakfast, lunch, snacks and dinner.</p></div>
+          {!student && <button className="primary" onClick={()=>{setEditing(null);setForm(emptyForm);setShow(true);}}><Plus size={17}/> Add Menu</button>}
         </div>
 
-        {!student && (
-          <button
-            className="primary"
-            onClick={() => {
-              setEditing(null);
-              setForm(
-                emptyForm
-              );
-              setShow(true);
-            }}
-          >
-            <Plus size={17} />
-            Add Menu
-          </button>
-        )}
-      </div>
+        {error && <ErrorBox>{error}</ErrorBox>}
 
-      {error && (
-        <ErrorBox>
-          {error}
-        </ErrorBox>
-      )}
-
-      <div className="menu-grid">
-        {menus.map(
-          (menu, index) => (
-            <Card
-              key={
-                menu._id ||
-                index
-              }
-              title={
-                <>
-                  {menu.day}{" "}
-                  <span className="badge">
-                    {menu.type}
-                  </span>
-                </>
-              }
-              action={
-                !student && (
-                  <button
-                    className="secondary"
-                    onClick={() => {
-                      setEditing(
-                        menu
-                      );
-
-                      setForm({
-                        day: menu.day,
-                        type: menu.type,
-                        breakfast:
-                          arrayToString(
-                            menu.breakfast
-                          ),
-                        lunch:
-                          arrayToString(
-                            menu.lunch
-                          ),
-                        snacks:
-                          arrayToString(
-                            menu.snacks
-                          ),
-                        dinner:
-                          arrayToString(
-                            menu.dinner
-                          ),
-                      });
-
-                      setShow(true);
-                    }}
-                  >
-                    <Edit size={15} />
-                    Edit Menu
-                  </button>
-                )
-              }
-            >
-              <div className="meal-lines">
-                <p>
-                  <b>
-                    Breakfast
-                  </b>
-
-                  {arrayToString(
-                    menu.breakfast
-                  ) || "—"}
-                </p>
-
-                <p>
-                  <b>
-                    Lunch
-                  </b>
-
-                  {arrayToString(
-                    menu.lunch
-                  ) || "—"}
-                </p>
-
-                <p>
-                  <b>
-                    Snacks
-                  </b>
-
-                  {arrayToString(
-                    menu.snacks
-                  ) || "—"}
-                </p>
-
-                <p>
-                  <b>
-                    Dinner
-                  </b>
-
-                  {arrayToString(
-                    menu.dinner
-                  ) || "—"}
-                </p>
+        <div className="mess-menu-grid">
+          {menus.map((menu,index)=>(
+            <div className="mess-menu-card" key={menu._id||index}>
+              <div className="mess-menu-head">
+                <div><h2>{menu.day}</h2></div>
+                <span className="mess-type">{menu.type}</span>
+                {!student && <button className="mess-edit" onClick={()=>{setEditing(menu);setForm({day:menu.day,type:menu.type,breakfast:arrayToString(menu.breakfast),lunch:arrayToString(menu.lunch),snacks:arrayToString(menu.snacks),dinner:arrayToString(menu.dinner)});setShow(true);}}><Edit size={14}/></button>}
               </div>
-            </Card>
-          )
-        )}
-      </div>
+              <div className="mess-meals">
+                {[["Breakfast",menu.breakfast],["Lunch",menu.lunch],["Snacks",menu.snacks],["Dinner",menu.dinner]].map(([label,items])=><div className="mess-meal" key={label}><small>{label}</small><p>{arrayToString(items)||"Not available"}</p></div>)}
+              </div>
+            </div>
+          ))}
+          {!menus.length && <div className="mess-empty"><Empty text="No menu available."/></div>}
+        </div>
 
-      {!menus.length && (
-        <Empty
-          text="No menu available."
-        />
-      )}
-
-      {show && (
-        <Modal
-          title={
-            editing
-              ? "Update Mess Menu"
-              : "Add Mess Menu"
-          }
-          close={() =>
-            setShow(false)
-          }
-        >
-          <form
-            onSubmit={submit}
-          >
-            <label>
-              Day
-
-              <select
-                disabled={
-                  !!editing
-                }
-                value={form.day}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    day: e.target.value,
-                  })
-                }
-              >
-                {[
-                  "Monday",
-                  "Tuesday",
-                  "Wednesday",
-                  "Thursday",
-                  "Friday",
-                  "Saturday",
-                  "Sunday",
-                ].map((day) => (
-                  <option
-                    key={day}
-                    value={day}
-                  >
-                    {day}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              Type
-
-              <select
-                disabled={
-                  !!editing
-                }
-                value={form.type}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    type: e.target.value,
-                  })
-                }
-              >
-                <option value="veg">
-                  Veg
-                </option>
-
-                <option value="non-veg">
-                  Non-Veg
-                </option>
-              </select>
-            </label>
-
-            <label>
-              Breakfast
-
-              <input
-                required
-                value={
-                  form.breakfast
-                }
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    breakfast:
-                      e.target.value,
-                  })
-                }
-              />
-            </label>
-
-            <label>
-              Lunch
-
-              <input
-                required
-                value={form.lunch}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    lunch:
-                      e.target.value,
-                  })
-                }
-              />
-            </label>
-
-            <label>
-              Snacks
-
-              <input
-                required
-                value={
-                  form.snacks
-                }
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    snacks:
-                      e.target.value,
-                  })
-                }
-              />
-            </label>
-
-            <label>
-              Dinner
-
-              <input
-                required
-                value={
-                  form.dinner
-                }
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    dinner:
-                      e.target.value,
-                  })
-                }
-              />
-            </label>
-
-            <button
-              className="primary full"
-              type="submit"
-            >
-              {editing
-                ? "Update Menu"
-                : "Create Menu"}
-            </button>
+        {show && <Modal title={editing?"Update Mess Menu":"Add Mess Menu"} close={()=>setShow(false)}>
+          <form onSubmit={submit}>
+            <label>Day<select disabled={!!editing} value={form.day} onChange={(e)=>setForm({...form,day:e.target.value})}>{["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].map(day=><option key={day}>{day}</option>)}</select></label>
+            <label>Type<select disabled={!!editing} value={form.type} onChange={(e)=>setForm({...form,type:e.target.value})}><option value="veg">Veg</option><option value="non-veg">Non-Veg</option></select></label>
+            {[["Breakfast","breakfast"],["Lunch","lunch"],["Snacks","snacks"],["Dinner","dinner"]].map(([label,key])=><label key={key}>{label}<input required value={form[key]} onChange={(e)=>setForm({...form,[key]:e.target.value})}/></label>)}
+            <button className="primary full" type="submit">{editing?"Update Menu":"Create Menu"}</button>
           </form>
-        </Modal>
-      )}
+        </Modal>}
+      </div>
     </>
   );
 }
@@ -4963,319 +5999,80 @@ function Mess({
 ========================================================= */
 
 function LunchBoxBooking() {
-  const [data, setData] = useState(null);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
+  const [data,setData]=useState(null);
+  const [error,setError]=useState("");
+  const [loading,setLoading]=useState(true);
+  const [actionLoading,setActionLoading]=useState(false);
 
-  async function load() {
-    try {
-      setLoading(true);
-      setError("");
+  async function load(){try{setLoading(true);setError("");const response=await studentApi.lunchBoxStatus();setData(response.data);}catch(e){setError(e.response?.data?.message||"Unable to load lunchbox status");}finally{setLoading(false);}}
+  useEffect(()=>{load();},[]);
+  async function book(){try{setActionLoading(true);setError("");const response=await studentApi.bookLunchBox();setData(response.data);}catch(e){setError(e.response?.data?.message||"Unable to book lunchbox");}finally{setActionLoading(false);}}
+  async function cancel(){try{setActionLoading(true);setError("");const response=await studentApi.cancelLunchBox();setData(response.data);}catch(e){setError(e.response?.data?.message||"Unable to cancel lunchbox");}finally{setActionLoading(false);}}
 
-      const response =
-        await studentApi.lunchBoxStatus();
+  if(loading) return <Card title="Today's Lunchbox"><Loading/></Card>;
+  const booked=Boolean(data?.booked);
+  const status=data?.status||data?.lunchBox?.status;
 
-      setData(response.data);
-    } catch (e) {
-      setError(
-        e.response?.data?.message ||
-          "Unable to load lunchbox status"
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  async function book() {
-    try {
-      setActionLoading(true);
-      setError("");
-
-      const response =
-        await studentApi.bookLunchBox();
-
-      setData(response.data);
-    } catch (e) {
-      setError(
-        e.response?.data?.message ||
-          "Unable to book lunchbox"
-      );
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  async function cancel() {
-    try {
-      setActionLoading(true);
-      setError("");
-
-      const response =
-        await studentApi.cancelLunchBox();
-
-      setData(response.data);
-    } catch (e) {
-      setError(
-        e.response?.data?.message ||
-          "Unable to cancel lunchbox"
-      );
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  if (loading) {
-    return (
-      <Card title="Today's Lunchbox">
-        <Loading />
-      </Card>
-    );
-  }
-
-  const booked = Boolean(data?.booked);
-  const status = data?.status ||
-    data?.lunchBox?.status;
-
-  return (
-    <Card title="Today's Lunchbox">
-      {error && (
-        <ErrorBox>
-          {error}
-        </ErrorBox>
-      )}
-
-      {booked ? (
-        <>
-          <div className="row">
-            <span>Status</span>
-            <b>{status || "Booked"}</b>
-          </div>
-
-          {status === "collected" ? (
-            <div className="successbox">
-              Your lunchbox has been collected.
-            </div>
-          ) : (
-            <>
-              <p className="muted">
-                Your lunchbox is booked for today.
-                You can cancel it before 9:00 AM.
-              </p>
-
-              <button
-                className="secondary"
-                disabled={actionLoading}
-                onClick={cancel}
-              >
-                <X size={16} />
-                {actionLoading
-                  ? "Cancelling..."
-                  : "Cancel Lunchbox"}
-              </button>
-            </>
-          )}
-        </>
-      ) : (
-        <>
-          <p>
-            Do you want a lunchbox for today?
-          </p>
-
-          <p className="muted">
-            Booking is available until 9:00 AM.
-          </p>
-
-          <button
-            className="primary"
-            disabled={actionLoading}
-            onClick={book}
-          >
-            <Check size={16} />
-            {actionLoading
-              ? "Booking..."
-              : "Yes, Book Lunchbox"}
-          </button>
-        </>
-      )}
-    </Card>
-  );
+  return <>
+    <style>{`
+      .lunchbox-card{margin-bottom:30px;padding:0;border:1px solid #e2e8f0;border-radius:20px;background:#fff;box-shadow:0 9px 26px rgba(15,23,42,.05);overflow:hidden;}
+      .lunchbox-head{padding:20px 24px;border-bottom:1px solid #edf1f5;display:flex;align-items:center;gap:12px;}
+      .lunchbox-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;background:#eef0ff;color:#4f46e5;}
+      .lunchbox-head h2{margin:0;color:#10233f;font-size:19px;}
+      .lunchbox-body{padding:22px 24px;}
+      .lunchbox-status{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:15px 16px;margin-bottom:16px;border:1px solid #e5eaf0;border-radius:13px;background:#fbfcfe;}
+      .lunchbox-status span{color:#7183a0;font-size:13px;}.lunchbox-status strong{text-transform:capitalize;color:#172b46;}
+      .lunchbox-note{margin:0 0 17px;color:#64748b;line-height:1.55;}
+      .lunchbox-status-badge{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:999px;background:#eef8f1;color:#277449;font-size:12px;font-weight:800;}
+    `}</style>
+    <div className="lunchbox-card">
+      <div className="lunchbox-head"><div className="lunchbox-icon"><Utensils size={19}/></div><h2>Today's Lunchbox</h2></div>
+      <div className="lunchbox-body">
+        {error&&<ErrorBox>{error}</ErrorBox>}
+        {booked ? <>
+          <div className="lunchbox-status"><span>Status</span><span className="lunchbox-status-badge"><Check size={13}/>{status||"Booked"}</span></div>
+          {status==="collected" ? <p className="lunchbox-note">Your lunchbox has been collected successfully.</p> : <><p className="lunchbox-note">Your lunchbox is booked for today. You can cancel it before 9:00 AM.</p><button className="secondary" disabled={actionLoading} onClick={cancel}><X size={16}/>{actionLoading?"Cancelling...":"Cancel Lunchbox"}</button></>}
+        </> : <><p className="lunchbox-note">Do you want a lunchbox for today? Booking is available until 9:00 AM.</p><button className="primary" disabled={actionLoading} onClick={book}><Check size={16}/>{actionLoading?"Booking...":"Yes, Book Lunchbox"}</button></>}
+      </div>
+    </div>
+  </>;
 }
+
 
 /* =========================================================
    BUS
 ========================================================= */
 
-function BusPage({
-  student = false,
-}) {
-  const [data, setData] =
-    useState(null);
+function BusPage({ student = false }) {
+  const [data,setData]=useState(null); const [show,setShow]=useState(false); const [error,setError]=useState("");
+  const [form,setForm]=useState({busNo:"",route:"",hostelToCollege:"",collegeToHostel:""});
+  function load(){const request=student?studentApi.buses():adminApi.buses({page:1,limit:50});request.then(r=>setData(r.data)).catch(e=>setError(e.response?.data?.message||"No buses"));}
+  useEffect(()=>{load();},[student]);
+  async function create(e){e.preventDefault();try{await adminApi.createBus(form);setShow(false);load();}catch(e){setError(e.response?.data?.message||"Failed");}}
+  const rows=data?.busSchedule||data?.buses||[];
 
-  const [show, setShow] =
-    useState(false);
-
-  const [error, setError] =
-    useState("");
-
-  const [form, setForm] =
-    useState({
-      busNo: "",
-      route: "",
-      hostelToCollege: "",
-      collegeToHostel: "",
-    });
-
-  function load() {
-    const request = student
-      ? studentApi.buses()
-      : adminApi.buses({
-          page: 1,
-          limit: 50,
-        });
-
-    request
-      .then((response) =>
-        setData(response.data)
-      )
-      .catch((e) =>
-        setError(
-          e.response?.data?.message ||
-            "No buses"
-        )
-      );
-  }
-
-  useEffect(() => {
-    load();
-  }, [student]);
-
-  async function create(e) {
-    e.preventDefault();
-
-    try {
-      await adminApi.createBus(
-        form
-      );
-
-      setShow(false);
-
-      load();
-    } catch (e) {
-      setError(
-        e.response?.data?.message ||
-          "Failed"
-      );
-    }
-  }
-
-  const rows =
-    data?.busSchedule ||
-    data?.buses ||
-    [];
-
-  return (
-    <>
-      <div className="toolbar">
-        <div>
-          <h1>
-            Bus Schedule
-          </h1>
-
-          <p className="muted">
-            Hostel to college and
-            return timings.
-          </p>
-        </div>
-
-        {!student && (
-          <button
-            className="primary"
-            onClick={() =>
-              setShow(true)
-            }
-          >
-            <Plus size={17} />
-            Add Bus
-          </button>
-        )}
+  return <>
+    <style>{`
+      .bus-page{max-width:1180px;margin:0 auto;}
+      .bus-hero{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:28px;}
+      .bus-hero h1{margin:0;color:#10233f;font-size:clamp(34px,4vw,46px);letter-spacing:-1.4px;}.bus-hero p{margin:9px 0 0;color:#64748b;}
+      .bus-card{overflow:hidden;border:1px solid #e2e8f0;border-radius:20px;background:#fff;box-shadow:0 10px 28px rgba(15,23,42,.05);}
+      .bus-card-head{padding:22px 26px;border-bottom:1px solid #edf1f5;display:flex;align-items:center;gap:12px;}.bus-card-head h2{margin:0;color:#10233f;font-size:20px;}.bus-card-icon{width:40px;height:40px;display:grid;place-items:center;border-radius:12px;background:#eef0ff;color:#4f46e5;}
+      .bus-table{width:100%;overflow-x:auto;}.bus-table table{width:100%;min-width:650px;border-collapse:collapse;}.bus-table th{padding:14px 20px;text-align:left;color:#7183a0;font-size:11px;letter-spacing:.7px;text-transform:uppercase;border-bottom:1px solid #e8edf3;}.bus-table td{padding:19px 20px;color:#172b46;border-bottom:1px solid #edf1f5;}.bus-table tr:last-child td{border-bottom:0;}.bus-time{display:inline-flex;padding:7px 10px;border-radius:8px;background:#f4f6fa;font-weight:700;color:#52637c;}
+      @media(max-width:650px){.bus-hero{align-items:flex-start;flex-direction:column;}}
+    `}</style>
+    <div className="bus-page">
+      <div className="bus-hero"><div><h1>Bus Schedule</h1><p>Hostel to college and return timings.</p></div>{!student&&<button className="primary" onClick={()=>setShow(true)}><Plus size={17}/> Add Bus</button>}</div>
+      {error&&<ErrorBox>{error}</ErrorBox>}
+      <div className="bus-card">
+        <div className="bus-card-head"><div className="bus-card-icon"><Bus size={19}/></div><h2>Schedules</h2></div>
+        <div className="bus-table"><Table columns={[{key:"busNo",label:"Bus"},{key:"route",label:"Route"},{key:"hostelToCollege",label:"Hostel → College",render:(row)=><span className="bus-time">{row.hostelToCollege||"—"}</span>},{key:"collegeToHostel",label:"College → Hostel",render:(row)=><span className="bus-time">{row.collegeToHostel||"—"}</span>}]} rows={rows}/></div>
       </div>
-
-      {error && (
-        <ErrorBox>
-          {error}
-        </ErrorBox>
-      )}
-
-      <Card title="Schedules">
-        <Table
-          columns={[
-            {
-              key: "busNo",
-              label: "Bus",
-            },
-            {
-              key: "route",
-              label: "Route",
-            },
-            {
-              key:
-                "hostelToCollege",
-              label:
-                "Hostel → College",
-            },
-            {
-              key:
-                "collegeToHostel",
-              label:
-                "College → Hostel",
-            },
-          ]}
-          rows={rows}
-        />
-      </Card>
-
-      {show && (
-        <Modal
-          title="Create Bus Schedule"
-          close={() =>
-            setShow(false)
-          }
-        >
-          <form onSubmit={create}>
-            {Object.keys(form).map(
-              (key) => (
-                <label key={key}>
-                  {key}
-
-                  <input
-                    required
-                    value={form[key]}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        [key]:
-                          e.target.value,
-                      })
-                    }
-                  />
-                </label>
-              )
-            )}
-
-            <button className="primary full">
-              Create
-            </button>
-          </form>
-        </Modal>
-      )}
-    </>
-  );
+      {show&&<Modal title="Create Bus Schedule" close={()=>setShow(false)}><form onSubmit={create}>{Object.keys(form).map(key=><label key={key}>{key.replace(/([A-Z])/g," $1")}<input required value={form[key]} onChange={(e)=>setForm({...form,[key]:e.target.value})}/></label>)}<button className="primary full">Create Schedule</button></form></Modal>}
+    </div>
+  </>;
 }
+
 
 /* =========================================================
    ANNOUNCEMENTS
@@ -6105,219 +6902,33 @@ function KYC({
 ========================================================= */
 
 function Outings() {
-  const [data, setData] =
-    useState(null);
-
-  const [error, setError] =
-    useState("");
-
-  useEffect(() => {
-    adminApi
-      .outings({
-        page: 1,
-        limit: 50,
-      })
-      .then((response) =>
-        setData(response.data)
-      )
-      .catch((e) =>
-        setError(
-          e.response?.data?.message ||
-            "Failed"
-        )
-      );
-  }, []);
-
-  if (error) {
-    return (
-      <ErrorBox>
-        {error}
-      </ErrorBox>
-    );
-  }
-
-  if (!data) {
-    return <Loading />;
-  }
-
-  return (
-    <>
-      <h1>
-        Students on Leave
-      </h1>
-
-      <p className="muted">
-        Currently marked outside
-        the hostel.
-      </p>
-
-      <Card title="Outings">
-        <Table
-          columns={[
-            {
-              key: "studentId",
-              label: "Student",
-              render: (item) =>
-                item.studentId
-                  ?.userId
-                  ?.username ||
-                "—",
-            },
-            {
-              key: "category",
-              label: "Reason",
-            },
-            {
-              key:
-                "expectedReturnTime",
-              label:
-                "Expected Return",
-              render: (item) =>
-                item.expectedReturnTime
-                  ? new Date(
-                      item.expectedReturnTime
-                    ).toLocaleString()
-                  : "—",
-            },
-            {
-              key: "status",
-              label: "Status",
-            },
-          ]}
-          rows={
-            data.students ||
-            data.outings ||
-            []
-          }
-        />
-      </Card>
-    </>
-  );
+  const [data,setData]=useState(null); const [error,setError]=useState("");
+  useEffect(()=>{adminApi.outings({page:1,limit:50}).then(r=>setData(r.data)).catch(e=>setError(e.response?.data?.message||"Failed"));},[]);
+  if(error)return <ErrorBox>{error}</ErrorBox>; if(!data)return <Loading/>;
+  const rows=data.students||data.outings||[];
+  return <>
+    <style>{`
+      .outings-page{max-width:1180px;margin:0 auto;}.outings-hero{margin-bottom:27px;}.outings-hero h1{margin:0;color:#10233f;font-size:clamp(34px,4vw,46px);letter-spacing:-1.4px;}.outings-hero p{margin:9px 0 0;color:#64748b;}
+      .outings-card{overflow:hidden;border:1px solid #e2e8f0;border-radius:20px;background:#fff;box-shadow:0 10px 28px rgba(15,23,42,.05);}.outings-head{padding:22px 26px;border-bottom:1px solid #edf1f5;display:flex;align-items:center;gap:12px;}.outings-head h2{margin:0;color:#10233f;font-size:20px;}.outings-icon{width:40px;height:40px;display:grid;place-items:center;border-radius:12px;background:#eef0ff;color:#4f46e5;}.outing-status{display:inline-flex;padding:6px 9px;border-radius:999px;background:#f4f6fa;color:#52637c;font-size:12px;font-weight:700;text-transform:capitalize;}
+    `}</style>
+    <div className="outings-page"><div className="outings-hero"><h1>Students on Leave</h1><p>Currently marked outside the hostel.</p></div><div className="outings-card"><div className="outings-head"><div className="outings-icon"><CalendarDays size={19}/></div><h2>Outings</h2></div><Table columns={[{key:"studentId",label:"Student",render:i=>i.studentId?.userId?.username||"—"},{key:"category",label:"Reason"},{key:"expectedReturnTime",label:"Expected Return",render:i=>i.expectedReturnTime?new Date(i.expectedReturnTime).toLocaleString():"—"},{key:"status",label:"Status",render:i=><span className="outing-status">{i.status||"—"}</span>}]} rows={rows}/></div></div>
+  </>;
 }
+
 
 /* =========================================================
    STUDENT OUTING
 ========================================================= */
 
 function SimpleOuting() {
-  const [form, setForm] =
-    useState({
-      category: "home",
-      customReason: "",
-      expectedReturnTime: "",
-    });
-
-  const [message, setMessage] =
-    useState("");
-
-  async function submit(e) {
-    e.preventDefault();
-
-    try {
-      await studentApi.applyLeave(
-        form
-      );
-
-      setMessage(
-        "Outing informed successfully."
-      );
-    } catch (e) {
-      setMessage(
-        e.response?.data?.message ||
-          "Failed to submit outing"
-      );
-    }
-  }
-
-  return (
-    <>
-      <h1>
-        Apply Outing
-      </h1>
-
-      <Card title="Outing Information">
-        <form onSubmit={submit}>
-          <label>
-            Reason
-
-            <select
-              value={
-                form.category
-              }
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  category:
-                    e.target.value,
-                })
-              }
-            >
-              <option value="home">
-                Home
-              </option>
-
-              <option value="college">
-                College
-              </option>
-
-              <option value="medical">
-                Medical
-              </option>
-
-              <option value="other">
-                Other
-              </option>
-            </select>
-          </label>
-
-          <label>
-            Details
-
-            <textarea
-              value={
-                form.customReason
-              }
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  customReason:
-                    e.target.value,
-                })
-              }
-            />
-          </label>
-
-          <label>
-            Expected Return
-
-            <input
-              type="datetime-local"
-              value={
-                form.expectedReturnTime
-              }
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  expectedReturnTime:
-                    e.target.value,
-                })
-              }
-            />
-          </label>
-
-          {message && (
-            <div className="successbox">
-              {message}
-            </div>
-          )}
-
-          <button className="primary full">
-            Submit Outing
-          </button>
-        </form>
-      </Card>
-    </>
-  );
+  const [form,setForm]=useState({category:"home",customReason:"",expectedReturnTime:""}); const [message,setMessage]=useState("");
+  async function submit(e){e.preventDefault();try{await studentApi.applyLeave(form);setMessage("Outing informed successfully.");}catch(e){setMessage(e.response?.data?.message||"Failed to submit outing");}}
+  return <>
+    <style>{`
+      .simple-outing-page{max-width:900px;margin:0 auto;}.simple-outing-hero{margin-bottom:24px;}.simple-outing-hero h1{margin:0;color:#10233f;font-size:clamp(34px,4vw,46px);letter-spacing:-1.4px;}.simple-outing-hero p{margin:9px 0 0;color:#64748b;}.outing-form-card{border:1px solid #e2e8f0;border-radius:20px;background:#fff;box-shadow:0 10px 28px rgba(15,23,42,.05);padding:26px;}.outing-form-head{display:flex;align-items:center;gap:12px;margin-bottom:24px;}.outing-form-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;background:#eef0ff;color:#4f46e5;}.outing-form-head h2{margin:0;color:#10233f;font-size:20px;}.outing-form-card label{display:block;margin-bottom:18px;}.outing-form-card label:last-of-type{margin-bottom:22px;}.outing-submit{margin-top:4px;}.outing-success{padding:12px 14px;margin-bottom:17px;border:1px solid #d9ebdf;border-radius:10px;background:#f2faf4;color:#277449;font-size:14px;}
+    `}</style>
+    <div className="simple-outing-page"><div className="simple-outing-hero"><h1>Apply Outing</h1><p>Submit your outing details and expected return time.</p></div><div className="outing-form-card"><div className="outing-form-head"><div className="outing-form-icon"><CalendarDays size={19}/></div><h2>Outing Information</h2></div><form onSubmit={submit}><label>Reason<select value={form.category} onChange={e=>setForm({...form,category:e.target.value})}><option value="home">Home</option><option value="college">College</option><option value="medical">Medical</option><option value="other">Other</option></select></label><label>Details<textarea value={form.customReason} onChange={e=>setForm({...form,customReason:e.target.value})}/></label><label>Expected Return<input type="datetime-local" value={form.expectedReturnTime} onChange={e=>setForm({...form,expectedReturnTime:e.target.value})}/></label>{message&&<div className="outing-success">{message}</div>}<button className="primary full outing-submit">Submit Outing</button></form></div></div>
+  </>;
 }
 
 
@@ -6420,22 +7031,69 @@ function WorkerLunchBoxes() {
       setLoading(true);
       setError("");
 
+      const search = collegeName.trim();
+
       const [listResponse, summaryResponse] =
         await Promise.all([
-          collegeName.trim()
-            ? workerApi.todayLunchBoxesByCollege(
-                collegeName.trim()
-              )
+          search
+            ? workerApi.todayLunchBoxesByCollege(search)
             : workerApi.todayLunchBoxes(),
           workerApi.lunchBoxSummary(),
         ]);
 
-      setData(listResponse.data);
+      let result = listResponse.data;
+      let lunchBoxes =
+        result?.lunchBoxes ||
+        result?.data ||
+        (Array.isArray(result) ? result : []);
+
+      if (search && lunchBoxes.length === 0) {
+        const allResponse =
+          await workerApi.todayLunchBoxes();
+
+        const allData = allResponse.data;
+        const allLunchBoxes =
+          allData?.lunchBoxes ||
+          allData?.data ||
+          (Array.isArray(allData) ? allData : []);
+
+        const normalize = (value) =>
+          String(value || "")
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, " ");
+
+        const wanted = normalize(search);
+
+        lunchBoxes = allLunchBoxes.filter((item) => {
+          const college = normalize(
+            item.studentId?.collegeName ||
+            item.collegeName ||
+            item.studentId?.college ||
+            item.college ||
+            ""
+          );
+
+          return (
+            college === wanted ||
+            college.includes(wanted) ||
+            wanted.includes(college)
+          );
+        });
+
+        result = {
+          ...(allData || {}),
+          lunchBoxes,
+          total: lunchBoxes.length,
+        };
+      }
+
+      setData(result);
       setSummary(summaryResponse.data);
     } catch (e) {
       setError(
         e.response?.data?.message ||
-          "Unable to load today's lunchboxes"
+        "Unable to load today's lunchboxes"
       );
     } finally {
       setLoading(false);
@@ -6451,17 +7109,40 @@ function WorkerLunchBoxes() {
     await load();
   }
 
+  async function clearSearch() {
+    setCollegeName("");
+    try {
+      setLoading(true);
+      setError("");
+
+      const [listResponse, summaryResponse] =
+        await Promise.all([
+          workerApi.todayLunchBoxes(),
+          workerApi.lunchBoxSummary(),
+        ]);
+
+      setData(listResponse.data);
+      setSummary(summaryResponse.data);
+    } catch (e) {
+      setError(
+        e.response?.data?.message ||
+        "Unable to load today's lunchboxes"
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function collect(id) {
     try {
       setCollecting(id);
       setError("");
-
       await workerApi.collectLunchBox(id);
       await load();
     } catch (e) {
       setError(
         e.response?.data?.message ||
-          "Unable to collect lunchbox"
+        "Unable to collect lunchbox"
       );
     } finally {
       setCollecting("");
@@ -6473,162 +7154,1028 @@ function WorkerLunchBoxes() {
     data?.data ||
     (Array.isArray(data) ? data : []);
 
+  const booked =
+    summary?.totalBooked ??
+    data?.total ??
+    lunchBoxes.length;
+
+  const collected =
+    summary?.totalCollected ?? 0;
+
+  const pending =
+    summary?.totalPending ?? 0;
+
+  const currentSearch = collegeName.trim();
+
   return (
     <>
-      <div className="toolbar">
-        <div>
-          <h1>Today's Lunchboxes</h1>
+      <style>{`
+        .wlx-page {
+          width: 100%;
+          max-width: 1180px;
+          margin: 0 auto;
+        }
 
-          <p className="muted">
-            View booked lunchboxes and mark them as collected.
-          </p>
+        .wlx-hero {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 20px;
+          margin-bottom: 22px;
+        }
+
+        .wlx-eyebrow {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          margin-bottom: 7px;
+          color: #64748b;
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .wlx-hero h1 {
+          margin: 0;
+          color: #10233f;
+          font-size: clamp(30px, 4vw, 44px);
+          line-height: 1.05;
+          letter-spacing: -1.3px;
+        }
+
+        .wlx-hero p {
+          margin: 8px 0 0;
+          color: #64748b;
+          font-size: 14px;
+        }
+
+        .wlx-refresh {
+          min-height: 44px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 10px 18px !important;
+          border-radius: 12px !important;
+          border: 1px solid #d9def0 !important;
+          background: #fff !important;
+          color: #24324a !important;
+          font-weight: 700 !important;
+          box-shadow: 0 3px 10px rgba(15,23,42,.05);
+          transition: transform .18s ease, box-shadow .18s ease,
+                      border-color .18s ease, background .18s ease;
+        }
+
+        .wlx-refresh:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 18px rgba(79,70,229,.12);
+        }
+
+        .wlx-refresh:active:not(:disabled) {
+          transform: translateY(0);
+        }
+
+        .wlx-refresh.loading svg {
+          animation: wlx-spin .8s linear infinite;
+        }
+
+        @keyframes wlx-spin {
+          to { transform: rotate(360deg); }
+        }
+
+        .wlx-stats {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 14px;
+          margin-bottom: 18px;
+        }
+
+        .wlx-stat {
+          position: relative;
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          gap: 13px;
+          min-height: 76px;
+          padding: 15px 17px;
+          border: 1px solid #e2e8f0;
+          border-radius: 16px;
+          background: #fff;
+          cursor: default;
+          transition: transform .18s ease, box-shadow .18s ease,
+                      border-color .18s ease;
+        }
+
+        .wlx-stat:hover {
+          transform: translateY(-2px);
+          border-color: #d7def0;
+          box-shadow: 0 10px 24px rgba(15,23,42,.07);
+        }
+
+        .wlx-stat-icon {
+          width: 42px;
+          height: 42px;
+          flex: 0 0 42px;
+          display: grid;
+          place-items: center;
+          border-radius: 12px;
+          background: #eef0ff;
+          color: #4f46e5;
+        }
+
+        .wlx-stat:nth-child(2) .wlx-stat-icon {
+          background: #eef8f1;
+          color: #277449;
+        }
+
+        .wlx-stat:nth-child(3) .wlx-stat-icon {
+          background: #fff7e8;
+          color: #b7791f;
+        }
+
+        .wlx-stat-label {
+          display: block;
+          color: #7183a0;
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .wlx-stat-value {
+          display: block;
+          margin-top: 2px;
+          color: #10233f;
+          font-size: 24px;
+          line-height: 1;
+          font-weight: 800;
+        }
+
+        .wlx-stat:nth-child(2) .wlx-stat-value {
+          color: #277449;
+        }
+
+        .wlx-stat:nth-child(3) .wlx-stat-value {
+          color: #a16207;
+        }
+
+        .wlx-search-card {
+          margin-bottom: 18px;
+          padding: 18px;
+          border: 1px solid #e2e8f0;
+          border-radius: 18px;
+          background: #fff;
+          box-shadow: 0 7px 22px rgba(15,23,42,.04);
+        }
+
+        .wlx-search-top {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin-bottom: 12px;
+        }
+
+        .wlx-search-title {
+          display: flex;
+          align-items: center;
+          gap: 9px;
+        }
+
+        .wlx-search-icon {
+          width: 34px;
+          height: 34px;
+          display: grid;
+          place-items: center;
+          border-radius: 10px;
+          background: #eef0ff;
+          color: #4f46e5;
+        }
+
+        .wlx-search-title h2 {
+          margin: 0;
+          color: #10233f;
+          font-size: 16px;
+        }
+
+        .wlx-active-filter {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          max-width: 45%;
+          padding: 6px 9px;
+          border-radius: 999px;
+          background: #eef0ff;
+          color: #4f46e5;
+          font-size: 11px;
+          font-weight: 700;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .wlx-search-form {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto auto;
+          gap: 9px;
+        }
+
+        .wlx-input-wrap {
+          position: relative;
+          min-width: 0;
+        }
+
+        .wlx-input-wrap > svg {
+          position: absolute;
+          left: 13px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #94a3b8;
+          pointer-events: none;
+        }
+
+        .wlx-input-wrap input {
+          width: 100%;
+          min-width: 0;
+          box-sizing: border-box;
+          min-height: 44px;
+          padding: 10px 38px 10px 40px !important;
+          border: 1px solid #d9def0 !important;
+          border-radius: 12px !important;
+          background: #fff !important;
+          color: #172b46 !important;
+          font-size: 15px;
+          transition: border-color .18s ease, box-shadow .18s ease,
+                      background .18s ease;
+        }
+
+        .wlx-input-wrap input::placeholder {
+          color: #94a3b8;
+        }
+
+        .wlx-input-wrap input:focus {
+          border-color: #6366f1;
+          box-shadow: 0 0 0 3px rgba(99,102,241,.10);
+          outline: none;
+        }
+
+        .wlx-clear-input {
+          position: absolute;
+          right: 7px;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 30px;
+          height: 30px;
+          display: grid;
+          place-items: center;
+          padding: 0;
+          border: 0;
+          border-radius: 50%;
+          background: transparent;
+          color: #94a3b8;
+          cursor: pointer;
+          transition: background .15s ease, color .15s ease;
+        }
+
+        .wlx-clear-input:hover {
+          background: #f1f5f9;
+          color: #475569;
+        }
+
+        .wlx-search-btn,
+        .wlx-clear-btn {
+          min-height: 44px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 7px;
+          padding: 10px 18px !important;
+          border-radius: 12px !important;
+          white-space: nowrap;
+          font-weight: 700 !important;
+          transition: transform .18s ease, box-shadow .18s ease,
+                      background .18s ease, border-color .18s ease;
+        }
+
+        .wlx-clear-btn {
+          border: 1px solid #d9def0 !important;
+          background: #fff !important;
+          color: #24324a !important;
+        }
+
+        .wlx-refresh:hover:not(:disabled),
+        .wlx-clear-btn:hover:not(:disabled) {
+          transform: translateY(-1px);
+          border-color: #c9d0e5 !important;
+          background: #f8f9ff !important;
+          box-shadow: 0 7px 16px rgba(15,23,42,.08);
+        }
+
+        .wlx-search-btn:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 8px 18px rgba(79,70,229,.18);
+        }
+
+        .wlx-refresh:active:not(:disabled),
+        .wlx-search-btn:active:not(:disabled),
+        .wlx-clear-btn:active:not(:disabled) {
+          transform: translateY(0);
+        }
+
+        .wlx-results {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          margin-top: 12px;
+          color: #7183a0;
+          font-size: 12px;
+        }
+
+        .wlx-results strong {
+          color: #10233f;
+        }
+
+        .wlx-results-count {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+        }
+
+        .wlx-table-card {
+          overflow: hidden;
+          border: 1px solid #e2e8f0;
+          border-radius: 18px;
+          background: #fff;
+          box-shadow: 0 7px 22px rgba(15,23,42,.04);
+        }
+
+        .wlx-table-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 17px 19px;
+          border-bottom: 1px solid #edf1f5;
+        }
+
+        .wlx-table-head h2 {
+          margin: 0;
+          color: #10233f;
+          font-size: 17px;
+        }
+
+        .wlx-table-head span {
+          color: #7183a0;
+          font-size: 12px;
+        }
+
+        .wlx-table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+
+        .wlx-table th {
+          padding: 11px 17px;
+          background: #f8fafc;
+          color: #64748b;
+          font-size: 10px;
+          font-weight: 800;
+          text-align: left;
+          text-transform: uppercase;
+          letter-spacing: .55px;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .wlx-table td {
+          padding: 13px 17px;
+          color: #172b46;
+          font-size: 13px;
+          border-bottom: 1px solid #edf1f5;
+        }
+
+        .wlx-table tbody tr {
+          transition: background .15s ease;
+        }
+
+        .wlx-table tbody tr:hover {
+          background: #fafbff;
+        }
+
+        .wlx-table tbody tr:last-child td {
+          border-bottom: 0;
+        }
+
+        .wlx-student {
+          color: #10233f;
+          font-weight: 700;
+        }
+
+        .wlx-status {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          padding: 5px 9px;
+          border-radius: 999px;
+          background: #f1f5f9;
+          color: #52637c;
+          font-size: 11px;
+          font-weight: 700;
+          text-transform: capitalize;
+        }
+
+        .wlx-status.collected {
+          background: #eef8f1;
+          color: #277449;
+        }
+
+        .wlx-collect {
+          min-height: 34px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          padding: 7px 11px !important;
+          font-size: 12px !important;
+        }
+
+        .wlx-empty {
+          padding: 38px 18px;
+          text-align: center;
+          color: #64748b;
+        }
+
+        .wlx-empty-icon {
+          width: 44px;
+          height: 44px;
+          display: grid;
+          place-items: center;
+          margin: 0 auto 9px;
+          border-radius: 12px;
+          background: #f1f5f9;
+          color: #94a3b8;
+        }
+
+        .wlx-mobile-list {
+          display: none;
+        }
+
+        @media (max-width: 700px) {
+          .wlx-page {
+            padding: 0;
+          }
+
+          .wlx-hero {
+            align-items: stretch;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 16px;
+          }
+
+          .wlx-hero h1 {
+            font-size: 29px;
+          }
+
+          .wlx-hero p {
+            max-width: 330px;
+            line-height: 1.5;
+          }
+
+          .wlx-refresh {
+            width: 100%;
+            border-radius: 12px !important;
+          }
+
+          .wlx-stats {
+            gap: 7px;
+            margin-bottom: 12px;
+          }
+
+          .wlx-stat {
+            min-height: 67px;
+            padding: 10px 8px;
+            gap: 7px;
+            border-radius: 12px;
+          }
+
+          .wlx-stat-icon {
+            display: none;
+          }
+
+          .wlx-stat-label {
+            font-size: 9px;
+            line-height: 1.1;
+          }
+
+          .wlx-stat-value {
+            font-size: 20px;
+            margin-top: 4px;
+          }
+
+          .wlx-search-card {
+            padding: 13px;
+            margin-bottom: 12px;
+            border-radius: 14px;
+          }
+
+          .wlx-search-top {
+            margin-bottom: 10px;
+          }
+
+          .wlx-search-icon {
+            width: 30px;
+            height: 30px;
+          }
+
+          .wlx-search-title h2 {
+            font-size: 14px;
+          }
+
+          .wlx-active-filter {
+            max-width: 42%;
+          }
+
+          .wlx-search-form {
+            grid-template-columns: 1fr 1fr;
+          }
+
+          .wlx-input-wrap {
+            grid-column: 1 / -1;
+          }
+
+          .wlx-search-btn,
+          .wlx-clear-btn {
+            width: 100%;
+            border-radius: 12px !important;
+          }
+
+          .wlx-results {
+            margin-top: 9px;
+          }
+
+          .wlx-table-head {
+            padding: 13px;
+          }
+
+          .wlx-table-head h2 {
+            font-size: 15px;
+          }
+
+          .wlx-table-head span {
+            font-size: 10px;
+          }
+
+          .wlx-desktop-table {
+            display: none;
+          }
+
+          .wlx-mobile-list {
+            display: block;
+          }
+
+          .wlx-mobile-header,
+          .wlx-mobile-row {
+            display: grid;
+            grid-template-columns:
+              minmax(0, 1.35fr)
+              minmax(42px, .65fr)
+              minmax(60px, .8fr)
+              minmax(68px, .8fr);
+            align-items: center;
+            column-gap: 6px;
+          }
+
+          .wlx-mobile-header {
+            padding: 9px 10px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+          }
+
+          .wlx-mobile-header span {
+            min-width: 0;
+            color: #64748b;
+            font-size: 8px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .3px;
+          }
+
+          .wlx-mobile-row {
+            min-height: 48px;
+            padding: 5px 10px;
+            border-bottom: 1px solid #edf1f5;
+            transition: background .15s ease;
+          }
+
+          .wlx-mobile-row:last-child {
+            border-bottom: 0;
+          }
+
+          .wlx-mobile-row:hover {
+            background: #fafbff;
+          }
+
+          .wlx-mobile-cell {
+            min-width: 0;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            color: #172b46;
+            font-size: 11px;
+          }
+
+          .wlx-mobile-cell.student {
+            color: #10233f;
+            font-weight: 700;
+          }
+
+          .wlx-mobile-status {
+            justify-self: start;
+          }
+
+          .wlx-mobile-action {
+            justify-self: end;
+            overflow: visible;
+          }
+
+          .wlx-mobile-action button {
+            min-height: 32px;
+            padding: 5px 7px !important;
+            font-size: 10px !important;
+            white-space: nowrap;
+          }
+
+          .wlx-mobile-empty {
+            padding: 30px 12px;
+            text-align: center;
+            color: #64748b;
+            font-size: 12px;
+          }
+        }
+
+        @media (max-width: 360px) {
+          .wlx-hero h1 {
+            font-size: 26px;
+          }
+
+          .wlx-stat {
+            padding-left: 6px;
+            padding-right: 6px;
+          }
+
+          .wlx-stat-label {
+            font-size: 8px;
+          }
+
+          .wlx-stat-value {
+            font-size: 18px;
+          }
+
+          .wlx-mobile-header,
+          .wlx-mobile-row {
+            grid-template-columns:
+              minmax(0, 1.3fr)
+              minmax(38px, .6fr)
+              minmax(56px, .75fr)
+              minmax(64px, .75fr);
+            column-gap: 4px;
+            padding-left: 7px;
+            padding-right: 7px;
+          }
+
+          .wlx-mobile-cell {
+            font-size: 10px;
+          }
+
+          .wlx-mobile-header span {
+            font-size: 7px;
+          }
+        }
+      `}</style>
+
+      <div className="wlx-page">
+        <div className="wlx-hero">
+          <div>
+            <div className="wlx-eyebrow">
+              <Utensils size={14} />
+              Daily meal collection
+            </div>
+
+            <h1>Today's Lunchboxes</h1>
+
+            <p>
+              Manage today's bookings and quickly mark
+              each lunchbox as collected.
+            </p>
+          </div>
+
+          <button
+            className={`secondary wlx-refresh ${
+              loading ? "loading" : ""
+            }`}
+            onClick={load}
+            disabled={loading}
+            title="Refresh today's lunchbox data"
+          >
+            <Check size={16} />
+            {loading ? "Refreshing..." : "Refresh"}
+          </button>
         </div>
 
-        <button
-          className="secondary"
-          onClick={load}
-          disabled={loading}
-        >
-          Refresh
-        </button>
-      </div>
+        {error && <ErrorBox>{error}</ErrorBox>}
 
-      {error && (
-        <ErrorBox>
-          {error}
-        </ErrorBox>
-      )}
+        <div className="wlx-stats">
+          <div className="wlx-stat">
+            <div className="wlx-stat-icon">
+              <Utensils size={19} />
+            </div>
+            <div>
+              <span className="wlx-stat-label">
+                Total booked
+              </span>
+              <strong className="wlx-stat-value">
+                {booked}
+              </strong>
+            </div>
+          </div>
 
-      <div className="stats">
-        <Stat
-          label="Booked"
-          value={
-            summary?.totalBooked ??
-            data?.total ??
-            lunchBoxes.length
-          }
-          icon={Utensils}
-        />
+          <div className="wlx-stat">
+            <div className="wlx-stat-icon">
+              <Check size={19} />
+            </div>
+            <div>
+              <span className="wlx-stat-label">
+                Collected
+              </span>
+              <strong className="wlx-stat-value">
+                {collected}
+              </strong>
+            </div>
+          </div>
 
-        <Stat
-          label="Collected"
-          value={summary?.totalCollected ?? 0}
-          icon={Check}
-        />
+          <div className="wlx-stat">
+            <div className="wlx-stat-icon">
+              <Utensils size={19} />
+            </div>
+            <div>
+              <span className="wlx-stat-label">
+                Pending
+              </span>
+              <strong className="wlx-stat-value">
+                {pending}
+              </strong>
+            </div>
+          </div>
+        </div>
 
-        <Stat
-          label="Pending"
-          value={summary?.totalPending ?? 0}
-          icon={Utensils}
-        />
-      </div>
+        <div className="wlx-search-card">
+          <div className="wlx-search-top">
+            <div className="wlx-search-title">
+              <div className="wlx-search-icon">
+                <Search size={16} />
+              </div>
 
-      <Card title="Search By College">
-        <form
-          className="toolbar"
-          onSubmit={searchCollege}
-        >
-          <input
-            value={collegeName}
-            onChange={(e) =>
-              setCollegeName(e.target.value)
-            }
-            placeholder="Enter college name"
-          />
+              <h2>Search By College</h2>
+            </div>
 
-          <button
-            className="primary"
-            type="submit"
+            {currentSearch && (
+              <span
+                className="wlx-active-filter"
+                title={currentSearch}
+              >
+                Filter: {currentSearch}
+              </span>
+            )}
+          </div>
+
+          <form
+            className="wlx-search-form"
+            onSubmit={searchCollege}
           >
-            <Search size={16} />
-            Search
-          </button>
+            <div className="wlx-input-wrap">
+              <Search size={17} />
 
-          <button
-            className="secondary"
-            type="button"
-            onClick={() => {
-              setCollegeName("");
-              setTimeout(load, 0);
-            }}
-          >
-            Clear
-          </button>
-        </form>
-      </Card>
+              <input
+                value={collegeName}
+                onChange={(e) =>
+                  setCollegeName(e.target.value)
+                }
+                placeholder="Enter college name"
+                aria-label="Search by college"
+              />
 
-      <Card
-        title={
-          collegeName.trim()
-            ? `Lunchboxes - ${collegeName}`
-            : "Booked Students"
-        }
-      >
-        {loading ? (
-          <Loading />
-        ) : (
-          <Table
-            columns={[
-              {
-                key: "student",
-                label: "Student",
-                render: (item) =>
-                  item.studentId?.userId?.username ||
-                  "—",
-              },
-              {
-                key: "room",
-                label: "Room",
-                render: (item) =>
-                  item.studentId?.roomNo ||
-                  "—",
-              },
-              {
-                key: "college",
-                label: "College",
-                render: (item) =>
-                  item.studentId?.collegeName ||
-                  item.collegeName ||
-                  "—",
-              },
-              {
-                key: "phone",
-                label: "Phone",
-                render: (item) =>
-                  item.studentId?.userId?.phoneNumber ||
-                  "—",
-              },
-              {
-                key: "status",
-                label: "Status",
-                render: (item) =>
-                  item.status || "booked",
-              },
-            ]}
-            rows={lunchBoxes}
-            actions={(item) =>
-              item.status === "collected" ? (
-                <span className="badge">
-                  Collected
-                </span>
-              ) : (
+              {collegeName && (
                 <button
-                  className="primary"
-                  disabled={collecting === item._id}
-                  onClick={() =>
-                    collect(item._id)
-                  }
+                  type="button"
+                  className="wlx-clear-input"
+                  onClick={clearSearch}
+                  aria-label="Clear college search"
+                  title="Clear"
                 >
-                  <Check size={15} />
-                  {collecting === item._id
-                    ? "Collecting..."
-                    : "Collect"}
+                  <X size={15} />
                 </button>
-              )
-            }
-          />
-        )}
-      </Card>
+              )}
+            </div>
+
+            <button
+              className="primary wlx-search-btn"
+              type="submit"
+              disabled={loading}
+            >
+              <Search size={16} />
+              {loading ? "Searching..." : "Search"}
+            </button>
+
+            <button
+              className="secondary wlx-clear-btn"
+              type="button"
+              onClick={clearSearch}
+              disabled={!collegeName && !loading}
+            >
+              Clear
+            </button>
+          </form>
+
+          <div className="wlx-results">
+            <span className="wlx-results-count">
+              Showing <strong>{lunchBoxes.length}</strong> students
+            </span>
+
+            {currentSearch && (
+              <span>
+                Results for <strong>{currentSearch}</strong>
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="wlx-table-card">
+          <div className="wlx-table-head">
+            <h2>
+              {currentSearch
+                ? `Lunchboxes · ${currentSearch}`
+                : "Booked Students"}
+            </h2>
+
+            <span>
+              {lunchBoxes.length}{" "}
+              {lunchBoxes.length === 1
+                ? "student"
+                : "students"}
+            </span>
+          </div>
+
+          {loading ? (
+            <Loading />
+          ) : (
+            <div className="wlx-table-box">
+              <div className="wlx-desktop-table">
+                <table className="wlx-table">
+                  <thead>
+                    <tr>
+                      <th>Student</th>
+                      <th>Room</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {lunchBoxes.length ? (
+                      lunchBoxes.map((item) => (
+                        <tr key={item._id}>
+                          <td>
+                            <span className="wlx-student">
+                              {item.studentId?.userId?.username ||
+                                "—"}
+                            </span>
+                          </td>
+
+                          <td>
+                            {item.studentId?.roomNo || "—"}
+                          </td>
+
+                          <td>
+                            <span
+                              className={`wlx-status ${
+                                item.status === "collected"
+                                  ? "collected"
+                                  : ""
+                              }`}
+                            >
+                              {item.status || "booked"}
+                            </span>
+                          </td>
+
+                          <td>
+                            {item.status === "collected" ? (
+                              <span className="wlx-status collected">
+                                <Check size={12} />
+                                Collected
+                              </span>
+                            ) : (
+                              <button
+                                className="primary wlx-collect"
+                                disabled={
+                                  collecting === item._id
+                                }
+                                onClick={() =>
+                                  collect(item._id)
+                                }
+                              >
+                                <Check size={14} />
+                                {collecting === item._id
+                                  ? "Collecting..."
+                                  : "Collect"}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan="4"
+                          className="wlx-empty"
+                        >
+                          <div className="wlx-empty-icon">
+                            <Utensils size={19} />
+                          </div>
+                          No booked students found.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="wlx-mobile-list">
+                <div className="wlx-mobile-header">
+                  <span>Student</span>
+                  <span>Room</span>
+                  <span>Status</span>
+                  <span>Actions</span>
+                </div>
+
+                {lunchBoxes.length ? (
+                  lunchBoxes.map((item) => (
+                    <div
+                      className="wlx-mobile-row"
+                      key={item._id}
+                    >
+                      <div className="wlx-mobile-cell student">
+                        {item.studentId?.userId?.username ||
+                          "—"}
+                      </div>
+
+                      <div className="wlx-mobile-cell">
+                        {item.studentId?.roomNo || "—"}
+                      </div>
+
+                      <div className="wlx-mobile-cell wlx-mobile-status">
+                        <span
+                          className={`wlx-status ${
+                            item.status === "collected"
+                              ? "collected"
+                              : ""
+                          }`}
+                        >
+                          {item.status || "booked"}
+                        </span>
+                      </div>
+
+                      <div className="wlx-mobile-cell wlx-mobile-action">
+                        {item.status === "collected" ? (
+                          <span className="wlx-status collected">
+                            <Check size={11} />
+                            Collected
+                          </span>
+                        ) : (
+                          <button
+                            className="primary"
+                            disabled={
+                              collecting === item._id
+                            }
+                            onClick={() =>
+                              collect(item._id)
+                            }
+                          >
+                            <Check size={12} />
+                            {collecting === item._id
+                              ? "..."
+                              : "Collect"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="wlx-mobile-empty">
+                    No booked students found.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </>
   );
 }
@@ -6640,42 +8187,346 @@ function WorkerLunchBoxes() {
 function WorkerProfile() {
   const { user } = useAuth();
 
+  const name = user?.username || "Worker";
+  const initials = name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "W";
+
   return (
     <>
-      <h1>Worker Profile</h1>
+      <style>{`
+        .worker-profile-page {
+          max-width: 1180px;
+          margin: 0 auto;
+        }
 
-      <p className="muted">
-        Your worker account information.
-      </p>
+        .worker-profile-hero {
+          display: flex;
+          align-items: flex-end;
+          justify-content: space-between;
+          gap: 24px;
+          margin-bottom: 28px;
+        }
 
-      <Card title="Profile Information">
-        <div className="meal-lines">
-          <p>
-            <b>Name</b>
-            {user?.username || "—"}
-          </p>
+        .worker-profile-title {
+          margin: 0;
+          font-size: clamp(34px, 4vw, 48px);
+          line-height: 1.05;
+          letter-spacing: -1.5px;
+        }
 
-          <p>
-            <b>Email</b>
-            {user?.email || "—"}
-          </p>
+        .worker-profile-subtitle {
+          margin: 12px 0 0;
+          color: #64748b;
+          font-size: 16px;
+        }
 
-          <p>
-            <b>Phone</b>
-            {user?.phoneNumber || "—"}
-          </p>
+        .worker-profile-status {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 14px;
+          border: 1px solid #dbe7df;
+          border-radius: 999px;
+          background: #f3faf5;
+          color: #247044;
+          font-size: 13px;
+          font-weight: 700;
+          white-space: nowrap;
+        }
 
-          <p>
-            <b>Role</b>
-            Worker
-          </p>
+        .worker-profile-card {
+          display: grid;
+          grid-template-columns: 320px minmax(0, 1fr);
+          overflow: hidden;
+          border: 1px solid #e2e8f0;
+          border-radius: 20px;
+          background: #fff;
+          box-shadow: 0 12px 35px rgba(15, 23, 42, 0.07);
+        }
 
-          <p>
-            <b>Worker Type</b>
-            Lunchbox
-          </p>
+        .worker-profile-side {
+          position: relative;
+          padding: 34px 30px;
+          background: linear-gradient(145deg, #f8fafc 0%, #eef2f7 100%);
+          border-right: 1px solid #e2e8f0;
+        }
+
+        .worker-profile-avatar {
+          width: 92px;
+          height: 92px;
+          display: grid;
+          place-items: center;
+          margin-bottom: 22px;
+          border-radius: 24px;
+          background: #10233f;
+          color: #fff;
+          font-size: 32px;
+          font-weight: 800;
+          letter-spacing: -1px;
+          box-shadow: 0 10px 22px rgba(16, 35, 63, 0.18);
+        }
+
+        .worker-profile-side h2 {
+          margin: 0;
+          color: #10233f;
+          font-size: 25px;
+          line-height: 1.2;
+        }
+
+        .worker-profile-side p {
+          margin: 9px 0 0;
+          color: #64748b;
+          line-height: 1.55;
+        }
+
+        .worker-profile-type {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          margin-top: 22px;
+          padding: 8px 11px;
+          border-radius: 10px;
+          background: #fff;
+          border: 1px solid #e2e8f0;
+          color: #334155;
+          font-size: 13px;
+          font-weight: 700;
+        }
+
+        .worker-profile-main {
+          padding: 34px;
+        }
+
+        .worker-profile-main-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          margin-bottom: 24px;
+        }
+
+        .worker-profile-main-head h3 {
+          margin: 0;
+          color: #10233f;
+          font-size: 21px;
+        }
+
+        .worker-profile-main-head span {
+          color: #94a3b8;
+          font-size: 12px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.8px;
+        }
+
+        .worker-profile-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 14px;
+        }
+
+        .worker-profile-field {
+          display: flex;
+          align-items: flex-start;
+          gap: 14px;
+          min-width: 0;
+          padding: 17px;
+          border: 1px solid #e5eaf0;
+          border-radius: 14px;
+          background: #fbfcfe;
+        }
+
+        .worker-profile-field-icon {
+          flex: 0 0 38px;
+          width: 38px;
+          height: 38px;
+          display: grid;
+          place-items: center;
+          border-radius: 10px;
+          background: #edf2f7;
+          color: #10233f;
+        }
+
+        .worker-profile-field small {
+          display: block;
+          margin-bottom: 6px;
+          color: #7a8aa0;
+          font-size: 11px;
+          font-weight: 800;
+          letter-spacing: 0.7px;
+          text-transform: uppercase;
+        }
+
+        .worker-profile-field strong {
+          display: block;
+          overflow-wrap: anywhere;
+          color: #172b46;
+          font-size: 16px;
+          font-weight: 600;
+        }
+
+        .worker-profile-footer {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-top: 24px;
+          padding-top: 20px;
+          border-top: 1px solid #edf1f5;
+          color: #64748b;
+          font-size: 13px;
+        }
+
+        @media (max-width: 800px) {
+          .worker-profile-hero {
+            align-items: flex-start;
+            flex-direction: column;
+          }
+
+          .worker-profile-card {
+            grid-template-columns: 1fr;
+          }
+
+          .worker-profile-side {
+            border-right: 0;
+            border-bottom: 1px solid #e2e8f0;
+          }
+        }
+
+        @media (max-width: 560px) {
+          .worker-profile-main,
+          .worker-profile-side {
+            padding: 24px 20px;
+          }
+
+          .worker-profile-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
+
+      <div className="worker-profile-page">
+        <div className="worker-profile-hero">
+          <div>
+            <p className="muted" style={{ marginBottom: 8 }}>
+              Hostel Staff
+            </p>
+            <h1 className="worker-profile-title">
+              Worker Profile
+            </h1>
+            <p className="worker-profile-subtitle">
+              Your worker account information and role details.
+            </p>
+          </div>
+
+          <div className="worker-profile-status">
+            <BadgeCheck size={17} />
+            Active Worker Account
+          </div>
         </div>
-      </Card>
+
+        <div className="worker-profile-card">
+          <div className="worker-profile-side">
+            <div className="worker-profile-avatar">
+              {initials}
+            </div>
+
+            <h2>{name}</h2>
+            <p>
+              Hostel staff member responsible for lunchbox
+              operations.
+            </p>
+
+            <div className="worker-profile-type">
+              <Utensils size={15} />
+              Lunchbox Worker
+            </div>
+          </div>
+
+          <div className="worker-profile-main">
+            <div className="worker-profile-main-head">
+              <h3>Profile Information</h3>
+              <span>Account Details</span>
+            </div>
+
+            <div className="worker-profile-grid">
+              <div className="worker-profile-field">
+                <div className="worker-profile-field-icon">
+                  <UserRound size={18} />
+                </div>
+                <div>
+                  <small>Name</small>
+                  <strong>{name}</strong>
+                </div>
+              </div>
+
+              <div className="worker-profile-field">
+                <div className="worker-profile-field-icon">
+                  <Mail size={18} />
+                </div>
+                <div>
+                  <small>Email</small>
+                  <strong>{user?.email || "—"}</strong>
+                </div>
+              </div>
+
+              <div className="worker-profile-field">
+                <div className="worker-profile-field-icon">
+                  <Phone size={18} />
+                </div>
+                <div>
+                  <small>Phone</small>
+                  <strong>{user?.phoneNumber || "—"}</strong>
+                </div>
+              </div>
+
+              <div className="worker-profile-field">
+                <div className="worker-profile-field-icon">
+                  <ShieldCheck size={18} />
+                </div>
+                <div>
+                  <small>Role</small>
+                  <strong>Worker</strong>
+                </div>
+              </div>
+
+              <div className="worker-profile-field">
+                <div className="worker-profile-field-icon">
+                  <Briefcase size={18} />
+                </div>
+                <div>
+                  <small>Worker Type</small>
+                  <strong>Lunchbox</strong>
+                </div>
+              </div>
+
+              {user?.address?.city || user?.address?.state ? (
+                <div className="worker-profile-field">
+                  <div className="worker-profile-field-icon">
+                    <MapPin size={18} />
+                  </div>
+                  <div>
+                    <small>Location</small>
+                    <strong>
+                      {[user?.address?.city, user?.address?.state]
+                        .filter(Boolean)
+                        .join(", ") || "—"}
+                    </strong>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="worker-profile-footer">
+              <ShieldCheck size={16} />
+              Your account is configured for hostel lunchbox operations.
+            </div>
+          </div>
+        </div>
+      </div>
     </>
   );
 }

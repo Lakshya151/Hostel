@@ -224,27 +224,31 @@ router.get("/lunchbox/my-status",studentMiddleware,getMyLunchBoxStatus);
 
 
 //lunchbox for worker
-router.patch(
-    "/lunchbox/collect/:lunchBoxId",
-    workerMiddleware,
-    collectLunchBox
-);
-
 router.get(
     "/lunchbox/today",
+    commonMiddleware,
     workerMiddleware,
     getTodayLunchBoxes
 );
 
 router.get(
     "/lunchbox/today/college",
+    commonMiddleware,
     workerMiddleware,
     getTodayLunchBoxesByCollege
 );
 
 router.get(
     "/lunchbox/today/summary",
+    commonMiddleware,
     workerMiddleware,
     getTodayLunchBoxSummary
+);
+
+router.patch(
+    "/lunchbox/collect/:lunchBoxId",
+    commonMiddleware,
+    workerMiddleware,
+    collectLunchBox
 );
 module.exports=router;

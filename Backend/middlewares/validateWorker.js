@@ -1,4 +1,4 @@
-const validator=('validator');
+const validator = require('validator');
 
 const validateWorker =(data)=>{
     const mandatoryField=['username','email','phoneNumber','aadhar','address'];
@@ -35,7 +35,7 @@ const validateWorker =(data)=>{
         throw new Error("Village name is too big!");
     }
 
-    if(!validator.isPostalCode(pincodem,'IN')){
+    if(!validator.isPostalCode(pincode,'IN')){
         throw new Error("Invalid Pincode!");
     }
     if(!country && country.length >75 ){

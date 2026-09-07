@@ -17,7 +17,7 @@ const validateStudent=require('../middlewares/validateStudent');
 const validateWorker=require('../middlewares/validateWorker');
 const validator = require("validator");
 const validateBus = require('../utils/validateBus');
-const worker = require('../models/worker');
+const Worker = require('../models/worker');
 const lunchbox=require('../models/LunchBox');
 const LunchBox = require('../models/LunchBox');
 
@@ -713,12 +713,17 @@ const registerStudent=async(req,res)=>{
         }
 
         // address validation
-        if(!address || !address.city || !address.state || !address.pincode){
-            return res.status(400).json({
-                message:"Complete address is required!"
-            });
-        }
-
+        if (
+    !address ||
+    !address.village ||
+    !address.city ||
+    !address.state ||
+    !address.pincode
+) {
+    return res.status(400).json({
+        message: "Complete address including village is required!"
+    });
+}
         const normalizedTotalFee=Number(totalFee);
 
         if(
@@ -4323,12 +4328,17 @@ const registerWorkers=async (req,res)=>{
         if(profilePic && !validator.isURL(profilePic)){
             throw new Error("Invalid profile picture URL");
         }
-        if (!address ||!address.city ||!address.state || !address.pincode) {
-            return res.status(400).json({
-                message:
-                    "Complete address is required!"
-            });
-        }
+           if (
+    !address ||
+    !address.village ||
+    !address.city ||
+    !address.state ||
+    !address.pincode
+) {
+    return res.status(400).json({
+        message: "Complete address including village is required!"
+    });
+}
         const otp=generateOTP();
 
         const newUser = await User.create({
@@ -4505,7 +4515,7 @@ const bookLunchBox=async (req,res)=>{
         }
         const now =new Date();
         const hour=now.getHours();
-        if(hour >=9){
+        if(hour >=20){
             return res.status(400).json({
                 message:"Lunchbox booking is closed! Booking is available from 12:00 AM to 9:00 AM."
             });
@@ -4564,7 +4574,7 @@ const cancelLunchBox=async(req,res)=>{
         const now=new Date();
         const hour=now.getHours();
 
-        if(hour>=9){
+        if(hour>=20){
             return res.status(400).json({
                 message:"Lunchbox cancellation is closed after 9:00 AM!"
             });
@@ -4768,83 +4778,147 @@ const getTodayLunchBoxes=async(req,res)=>{
     }
 }
 //get lunch boxes using clg filter
-const getTodayLunchBoxesByCollege=async(req,res)=>{
-    try{
+const getTodayLunchBoxesByCollege = async (req, res) => {
+    try {
 
-        const userId=req.result._id;
+        const userId = req.result._id;
 
-        //check worker
-        const worker=await Worker.findOne({
-            userId:userId,
-            workerType:"lunchbox",
-            isActive:true
+        // Check worker
+        const worker = await Worker.findOne({
+            userId: userId,
+            workerType: "lunchbox",
+            isActive: true
         });
 
-        if(!worker){
+        if (!worker) {
             return res.status(403).json({
-                message:"Only active lunchbox workers can view lunchboxes!"
+                message: "Only active lunchbox workers can view lunchboxes!"
             });
         }
 
-        const {collegeName}=req.query;
+        const { search } = req.query;
 
-        if(!collegeName){
+        // Search is required
+        if (!search || !search.trim()) {
             return res.status(400).json({
-                message:"College name is required!"
+                message: "Search student name or college name!"
             });
         }
 
-        //normalize college name
-        const normalizedCollegeName=collegeName.trim().toLowerCase();
+        const normalizedSearch = search.trim();
 
-        if(!normalizedCollegeName){
-            return res.status(400).json({
-                message:"College name is required!"
-            });
-        }
-
-        //get today's date according to India timezone
-        const today=new Intl.DateTimeFormat("en-CA",{
-            timeZone:"Asia/Kolkata",
-            year:"numeric",
-            month:"2-digit",
-            day:"2-digit"
+        // Get today's date according to India timezone
+        const today = new Intl.DateTimeFormat("en-CA", {
+            timeZone: "Asia/Kolkata",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit"
         }).format(new Date());
 
-        const lunchBoxes=await LunchBox.find({
-            date:today
+
+        // ------------------------------------------------
+        // 1. Find users whose username matches the search
+        // ------------------------------------------------
+
+        const users = await User.find({
+            username: {
+                $regex: normalizedSearch,
+                $options: "i"
+            }
+        }).select("_id");
+
+
+        const userIds = users.map(user => user._id);
+
+
+        // ------------------------------------------------
+        // 2. Find students by:
+        //    - college name
+        //    OR
+        //    - user ID found above
+        // ------------------------------------------------
+
+        const students = await Student.find({
+            isResident: true,
+            $or: [
+                {
+                    collegeName: {
+                        $regex: normalizedSearch,
+                        $options: "i"
+                    }
+                },
+                {
+                    userId: {
+                        $in: userIds
+                    }
+                }
+            ]
+        }).select(
+            "_id userId roomNo course collegeName year"
+        );
+
+
+        // ------------------------------------------------
+        // 3. Get student IDs
+        // ------------------------------------------------
+
+        const studentIds = students.map(
+            student => student._id
+        );
+
+
+        // ------------------------------------------------
+        // 4. Find today's lunchboxes for those students
+        // ------------------------------------------------
+
+        const lunchBoxes = await LunchBox.find({
+            date: today,
+            studentId: {
+                $in: studentIds
+            }
         })
         .populate({
-            path:"studentId",
-            select:"userId roomNo course collegeName year",
-            match:{
-                collegeName:normalizedCollegeName
-            },
-            populate:{
-                path:"userId",
-                select:"username phoneNumber profilePic"
+            path: "studentId",
+            select: "userId roomNo course collegeName year",
+            populate: {
+                path: "userId",
+                select: "username phoneNumber profilePic"
             }
         });
 
-        //remove students which did not match college
-        const filteredLunchBoxes=lunchBoxes.filter(
-            lunchBox=>lunchBox.studentId
+
+        // ------------------------------------------------
+        // 5. Send response
+        // ------------------------------------------------
+
+        return res.status(200).json({
+
+            message: "Today's lunchboxes searched successfully!",
+
+            date: today,
+
+            search: normalizedSearch,
+
+            total: lunchBoxes.length,
+
+            lunchBoxes: lunchBoxes
+
+        });
+
+
+    } catch (err) {
+
+        console.error(
+            "getTodayLunchBoxesBySearch error:",
+            err
         );
 
-        res.status(200).json({
-            message:"Today's college lunchboxes fetched successfully!",
-            date:today,
-            collegeName:normalizedCollegeName,
-            total:filteredLunchBoxes.length,
-            lunchBoxes:filteredLunchBoxes
+        return res.status(500).json({
+            message: err.message
         });
 
-    }catch(err){
-        res.status(500).json({
-            message:err.message
-        });
     }
-}
+};
 // No of student who has booked lunch
 const getTodayLunchBoxSummary=async(req,res)=>{
     try{
