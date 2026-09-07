@@ -602,108 +602,6 @@ function Shell({ children }) {
           }
         }
 
-        .fee-installments-grid {
-          min-width: 0;
-          width: 100%;
-        }
-
-        .fee-installments-grid > div {
-          min-width: 0;
-          max-width: 100%;
-          box-sizing: border-box;
-          overflow-wrap: anywhere;
-        }
-
-        /* =====================================================
-           MOBILE MODALS
-           Keep modal overlays inside the actual content area so
-           they never extend underneath/outside the mobile sidebar.
-        ===================================================== */
-        .modal-overlay-responsive {
-          box-sizing: border-box !important;
-        }
-
-        .modal-overlay-responsive .modal {
-          box-sizing: border-box !important;
-          max-width: 100% !important;
-          max-height: calc(100vh - 32px) !important;
-          overflow-y: auto !important;
-          overflow-x: hidden !important;
-        }
-
-        .modal-overlay-responsive .modal form {
-          width: 100%;
-          min-width: 0;
-        }
-
-        .modal-overlay-responsive .modal label {
-          min-width: 0;
-        }
-
-        .modal-overlay-responsive .modal input,
-        .modal-overlay-responsive .modal textarea,
-        .modal-overlay-responsive .modal select {
-          width: 100%;
-          max-width: 100%;
-          min-width: 0;
-          box-sizing: border-box;
-        }
-
-        @media (max-width: 700px) {
-          .modal-overlay-responsive {
-            left: 72px !important;
-            right: 0 !important;
-            width: calc(100vw - 72px) !important;
-            max-width: calc(100vw - 72px) !important;
-            padding: 14px !important;
-            box-sizing: border-box !important;
-            overflow-y: auto !important;
-            overflow-x: hidden !important;
-          }
-
-          .modal-overlay-responsive .modal {
-            width: 100% !important;
-            max-width: 100% !important;
-            margin: 0 !important;
-            border-radius: 16px !important;
-            padding: 20px 16px !important;
-          }
-
-          .modal-overlay-responsive .modal h2 {
-            padding-right: 38px;
-            font-size: 20px !important;
-            line-height: 1.25 !important;
-            overflow-wrap: anywhere;
-          }
-
-          .modal-overlay-responsive .modal .close {
-            top: 12px !important;
-            right: 12px !important;
-            width: 34px !important;
-            height: 34px !important;
-          }
-
-          .modal-overlay-responsive .modal textarea {
-            min-height: 110px;
-            resize: vertical;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .modal-overlay-responsive {
-            left: 64px !important;
-            width: calc(100vw - 64px) !important;
-            max-width: calc(100vw - 64px) !important;
-            padding: 10px !important;
-          }
-
-          .modal-overlay-responsive .modal {
-            padding: 18px 13px !important;
-            border-radius: 14px !important;
-            max-height: calc(100vh - 20px) !important;
-          }
-        }
-
         @media (max-width: 480px) {
           .table-wrap tbody td {
             grid-template-columns: 82px minmax(0, 1fr);
@@ -1181,7 +1079,7 @@ function Modal({
   children,
 }) {
   return (
-    <div className="overlay modal-overlay-responsive">
+    <div className="overlay">
       <div className="modal">
         <button
           className="close"
@@ -2598,7 +2496,7 @@ function Students() {
       await adminApi.registerStudent({
         ...form,
         year: Number(form.year),
-        feeDue: Number(form.feeDue),
+        feeDue: Number(form.totalFee || 0),
         registrationFee: Number(
           form.registrationFee
         ),
@@ -3677,14 +3575,13 @@ function Students() {
 
                   <div className="student-register-grid-address">
                     <label className="student-register-label">
-                      Village <span>*</span>
+                      Village
                       <input
-                        required
                         value={form.address.village}
                         onChange={(e) =>
                           updateAddress("village", e.target.value)
                         }
-                        placeholder="Enter village"
+                        placeholder="Enter village (optional)"
                       />
                     </label>
 
@@ -4596,7 +4493,7 @@ function StudentDetails() {
                 </div>
 
                 <div
-                  className="details-grid fee-installments-grid"
+                  className="details-grid"
                 >
                   {(fee.installments || []).map(
                     (installment, index) => {
@@ -5366,22 +5263,10 @@ function Fees({ student = false }) {
         .fees-table th { padding:15px 20px;text-align:left;color:#7183a0;font-size:11px;letter-spacing:.7px;text-transform:uppercase;border-bottom:1px solid #e8edf3; }
         .fees-table td { padding:18px 20px;color:#172b46;border-bottom:1px solid #edf1f5;vertical-align:top; }
         .fees-table tr:last-child td { border-bottom:0; }
-        .fee-pill { display:inline-flex;align-items:center;justify-content:center;margin:0 6px 6px 0;padding:7px 9px;border-radius:8px;background:#f4f6fa;color:#52637c;font-size:12px;line-height:1.2;white-space:normal;max-width:100%;box-sizing:border-box;overflow-wrap:anywhere; }
+        .fee-pill { display:inline-flex;align-items:center;margin:0 6px 6px 0;padding:7px 9px;border-radius:8px;background:#f4f6fa;color:#52637c;font-size:12px; }
         .fee-paid { color:#277449;font-weight:700; }
         .fee-pending { color:#b45309;font-weight:700; }
-        @media(max-width:700px){
-          .fees-page { width:100%; max-width:100%; min-width:0; box-sizing:border-box; }
-          .fees-summary { grid-template-columns:1fr; width:100%; }
-          .fees-summary-card { min-width:0; width:100%; box-sizing:border-box; }
-          .fees-record-card { width:100%; max-width:100%; min-width:0; box-sizing:border-box; overflow:hidden; }
-          .fees-record-head { padding:18px 16px; }
-          .fees-table { width:100% !important; max-width:100% !important; overflow:visible !important; min-width:0 !important; box-sizing:border-box; }
-          .fees-table .table-wrap { width:100% !important; max-width:100% !important; overflow:visible !important; min-width:0 !important; }
-          .fees-table table { width:100% !important; min-width:0 !important; max-width:100% !important; table-layout:fixed !important; }
-          .fees-table tbody td { min-width:0 !important; max-width:100% !important; overflow-wrap:anywhere !important; word-break:break-word !important; }
-          .fees-table tbody td > div { min-width:0; max-width:100%; display:flex; flex-wrap:wrap; gap:4px; }
-          .fees-table .fee-pill { margin:0 2px 4px 0; padding:6px 8px; font-size:11px; max-width:100%; }
-        }
+        @media(max-width:700px){ .fees-summary{grid-template-columns:1fr;} .fees-record-head{padding:20px;} }
       `}</style>
 
       <div className="fees-page">
@@ -5906,29 +5791,110 @@ function Mess({ student = false }) {
   const [editing, setEditing] = useState(null);
   const [error, setError] = useState("");
 
-  const emptyForm = { day:"Monday", type:"veg", breakfast:"", lunch:"", snacks:"", dinner:"" };
+  const emptyForm = {
+    day: "Monday",
+    type: "veg",
+    breakfast: "",
+    lunch: "",
+    snacks: "",
+    dinner: "",
+  };
+
   const [form, setForm] = useState(emptyForm);
 
   function load() {
-    const request = student ? studentApi.menu() : adminApi.menu({ page:1, limit:50 });
-    request.then((response)=>setData(response.data)).catch((e)=>setError(e.response?.data?.message||"Menu unavailable"));
+    const request = student
+      ? studentApi.menu()
+      : adminApi.menu({ page: 1, limit: 50 });
+
+    request
+      .then((response) => setData(response.data))
+      .catch((e) =>
+        setError(
+          e.response?.data?.message ||
+            "Menu unavailable"
+        )
+      );
   }
-  useEffect(()=>{ load(); },[student]);
 
-  const arrayToString=(value)=>Array.isArray(value)?value.join(", "):value||"";
-  const stringToArray=(value)=>value.split(",").map((item)=>item.trim()).filter(Boolean);
+  useEffect(() => {
+    load();
+  }, [student]);
 
-  async function submit(e){
+  const arrayToString = (value) =>
+    Array.isArray(value)
+      ? value.join(", ")
+      : value || "";
+
+  const stringToArray = (value) =>
+    String(value || "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+  async function submit(e) {
     e.preventDefault();
-    const menuData={ breakfast:stringToArray(form.breakfast), lunch:stringToArray(form.lunch), snacks:stringToArray(form.snacks), dinner:stringToArray(form.dinner) };
-    try{
-      if(editing) await adminApi.updateMenu(editing.day, editing.type, menuData);
-      else await adminApi.createMenu({day:form.day,type:form.type,...menuData});
-      setShow(false); setEditing(null); load();
-    }catch(e){ setError(e.response?.data?.message||"Failed to save menu"); }
+
+    const menuData = {
+      day: form.day,
+      type: form.type,
+      breakfast: stringToArray(form.breakfast),
+      lunch: stringToArray(form.lunch),
+      snacks: stringToArray(form.snacks),
+      dinner: stringToArray(form.dinner),
+    };
+
+    try {
+      if (editing) {
+        // Use the OLD day/type in the URL and send the NEW day/type
+        // in the request body. This allows changing the day/type.
+        await adminApi.updateMenu(
+          editing.day,
+          editing.type,
+          menuData
+        );
+      } else {
+        await adminApi.createMenu(menuData);
+      }
+
+      setShow(false);
+      setEditing(null);
+      setForm(emptyForm);
+      setError("");
+      load();
+    } catch (e) {
+      setError(
+        e.response?.data?.message ||
+          "Failed to save menu"
+      );
+    }
   }
 
-  const menus=data?.menu||data?.menus||[];
+  async function deleteMenu(menu) {
+    const confirmed = window.confirm(
+      `Delete ${menu.day} ${menu.type} menu?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setError("");
+
+      await adminApi.deleteMenu(
+        menu.day,
+        menu.type
+      );
+
+      load();
+    } catch (e) {
+      setError(
+        e.response?.data?.message ||
+          "Failed to delete menu"
+      );
+    }
+  }
+
+  const menus = data?.menu || data?.menus || [];
 
   return (
     <>
@@ -5939,55 +5905,244 @@ function Mess({ student = false }) {
         .mess-hero p{margin:9px 0 0;color:#64748b;}
         .mess-menu-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;}
         .mess-menu-card{overflow:hidden;border:1px solid #e2e8f0;border-radius:20px;background:#fff;box-shadow:0 9px 26px rgba(15,23,42,.05);}
-        .mess-menu-head{padding:20px 22px;border-bottom:1px solid #edf1f5;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+        .mess-menu-head{padding:20px 22px;border-bottom:1px solid #edf1f5;display:flex;align-items:center;gap:10px;}
+        .mess-menu-title{flex:1;min-width:0;}
         .mess-menu-head h2{margin:0;color:#10233f;font-size:19px;}
-        .mess-type{padding:6px 9px;border-radius:999px;background:#f0efff;color:#4f46e5;font-size:11px;font-weight:800;text-transform:uppercase;}
-        .mess-edit{padding:6px 9px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;color:#52637c;cursor:pointer;}
+        .mess-type{padding:6px 9px;border-radius:999px;background:#f0efff;color:#4f46e5;font-size:11px;font-weight:800;text-transform:uppercase;white-space:nowrap;}
+        .mess-actions{display:flex;gap:7px;flex-shrink:0;}
+        .mess-edit,.mess-delete{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;background:#fff;}
+        .mess-edit{border:1px solid #e2e8f0;color:#52637c;}
+        .mess-delete{border:1px solid #fecaca;color:#dc2626;}
+        .mess-edit:hover{background:#f8fafc;}
+        .mess-delete:hover{background:#fef2f2;}
         .mess-meals{padding:19px 22px 22px;}
         .mess-meal{padding:13px 0;border-bottom:1px solid #edf1f5;}
         .mess-meal:last-child{border-bottom:0;padding-bottom:0;}
         .mess-meal:first-child{padding-top:0;}
         .mess-meal small{display:block;margin-bottom:5px;color:#7183a0;font-size:10px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;}
-        .mess-meal p{margin:0;color:#172b46;line-height:1.5;}
+        .mess-meal p{margin:0;color:#172b46;line-height:1.5;word-break:break-word;}
         .mess-empty{grid-column:1/-1;}
         @media(max-width:950px){.mess-menu-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
-        @media(max-width:620px){.mess-menu-grid{grid-template-columns:1fr;}.mess-hero{align-items:flex-start;flex-direction:column;}}
+        @media(max-width:620px){
+          .mess-menu-grid{grid-template-columns:1fr;}
+          .mess-hero{align-items:flex-start;flex-direction:column;}
+          .mess-menu-head{padding:17px;}
+          .mess-meals{padding:17px;}
+        }
       `}</style>
 
       <div className="mess-page">
         {student && <LunchBoxBooking />}
 
         <div className="mess-hero">
-          <div><h1>Mess Menu</h1><p>Weekly breakfast, lunch, snacks and dinner.</p></div>
-          {!student && <button className="primary" onClick={()=>{setEditing(null);setForm(emptyForm);setShow(true);}}><Plus size={17}/> Add Menu</button>}
+          <div>
+            <h1>Mess Menu</h1>
+            <p>
+              Weekly breakfast, lunch, snacks and dinner.
+            </p>
+          </div>
+
+          {!student && (
+            <button
+              className="primary"
+              onClick={() => {
+                setEditing(null);
+                setForm(emptyForm);
+                setError("");
+                setShow(true);
+              }}
+            >
+              <Plus size={17} />
+              Add Menu
+            </button>
+          )}
         </div>
 
         {error && <ErrorBox>{error}</ErrorBox>}
 
         <div className="mess-menu-grid">
-          {menus.map((menu,index)=>(
-            <div className="mess-menu-card" key={menu._id||index}>
+          {menus.map((menu, index) => (
+            <div
+              className="mess-menu-card"
+              key={menu._id || index}
+            >
               <div className="mess-menu-head">
-                <div><h2>{menu.day}</h2></div>
-                <span className="mess-type">{menu.type}</span>
-                {!student && <button className="mess-edit" onClick={()=>{setEditing(menu);setForm({day:menu.day,type:menu.type,breakfast:arrayToString(menu.breakfast),lunch:arrayToString(menu.lunch),snacks:arrayToString(menu.snacks),dinner:arrayToString(menu.dinner)});setShow(true);}}><Edit size={14}/></button>}
+                <div className="mess-menu-title">
+                  <h2>{menu.day}</h2>
+                </div>
+
+                <span className="mess-type">
+                  {menu.type}
+                </span>
+
+                {!student && (
+                  <div className="mess-actions">
+                    <button
+                      type="button"
+                      className="mess-edit"
+                      title="Edit menu"
+                      onClick={() => {
+                        setEditing(menu);
+                        setForm({
+                          day: menu.day,
+                          type: menu.type,
+                          breakfast: arrayToString(
+                            menu.breakfast
+                          ),
+                          lunch: arrayToString(
+                            menu.lunch
+                          ),
+                          snacks: arrayToString(
+                            menu.snacks
+                          ),
+                          dinner: arrayToString(
+                            menu.dinner
+                          ),
+                        });
+                        setError("");
+                        setShow(true);
+                      }}
+                    >
+                      <Edit size={14} />
+                    </button>
+
+                    <button
+                      type="button"
+                      className="mess-delete"
+                      title="Delete menu"
+                      onClick={() => deleteMenu(menu)}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                )}
               </div>
+
               <div className="mess-meals">
-                {[["Breakfast",menu.breakfast],["Lunch",menu.lunch],["Snacks",menu.snacks],["Dinner",menu.dinner]].map(([label,items])=><div className="mess-meal" key={label}><small>{label}</small><p>{arrayToString(items)||"Not available"}</p></div>)}
+                {[
+                  ["Breakfast", menu.breakfast],
+                  ["Lunch", menu.lunch],
+                  ["Snacks", menu.snacks],
+                  ["Dinner", menu.dinner],
+                ].map(([label, items]) => (
+                  <div
+                    className="mess-meal"
+                    key={label}
+                  >
+                    <small>{label}</small>
+                    <p>
+                      {arrayToString(items) ||
+                        "Not available"}
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
           ))}
-          {!menus.length && <div className="mess-empty"><Empty text="No menu available."/></div>}
+
+          {!menus.length && (
+            <div className="mess-empty">
+              <Empty text="No menu available." />
+            </div>
+          )}
         </div>
 
-        {show && <Modal title={editing?"Update Mess Menu":"Add Mess Menu"} close={()=>setShow(false)}>
-          <form onSubmit={submit}>
-            <label>Day<select disabled={!!editing} value={form.day} onChange={(e)=>setForm({...form,day:e.target.value})}>{["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].map(day=><option key={day}>{day}</option>)}</select></label>
-            <label>Type<select disabled={!!editing} value={form.type} onChange={(e)=>setForm({...form,type:e.target.value})}><option value="veg">Veg</option><option value="non-veg">Non-Veg</option></select></label>
-            {[["Breakfast","breakfast"],["Lunch","lunch"],["Snacks","snacks"],["Dinner","dinner"]].map(([label,key])=><label key={key}>{label}<input required value={form[key]} onChange={(e)=>setForm({...form,[key]:e.target.value})}/></label>)}
-            <button className="primary full" type="submit">{editing?"Update Menu":"Create Menu"}</button>
-          </form>
-        </Modal>}
+        {show && (
+          <Modal
+            title={
+              editing
+                ? "Update Mess Menu"
+                : "Add Mess Menu"
+            }
+            close={() => {
+              setShow(false);
+              setEditing(null);
+              setForm(emptyForm);
+            }}
+          >
+            <form onSubmit={submit}>
+              <label>
+                Day
+                <select
+                  value={form.day}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      day: e.target.value,
+                    })
+                  }
+                >
+                  {[
+                    "Monday",
+                    "Tuesday",
+                    "Wednesday",
+                    "Thursday",
+                    "Friday",
+                    "Saturday",
+                    "Sunday",
+                  ].map((day) => (
+                    <option
+                      key={day}
+                      value={day}
+                    >
+                      {day}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                Type
+                <select
+                  value={form.type}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      type: e.target.value,
+                    })
+                  }
+                >
+                  <option value="veg">
+                    Veg
+                  </option>
+                  <option value="non-veg">
+                    Non-Veg
+                  </option>
+                </select>
+              </label>
+
+              {[
+                ["Breakfast", "breakfast"],
+                ["Lunch", "lunch"],
+                ["Snacks", "snacks"],
+                ["Dinner", "dinner"],
+              ].map(([label, key]) => (
+                <label key={key}>
+                  {label}
+                  <input
+                    required
+                    value={form[key]}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        [key]: e.target.value,
+                      })
+                    }
+                  />
+                </label>
+              ))}
+
+              <button
+                className="primary full"
+                type="submit"
+              >
+                {editing
+                  ? "Update Menu"
+                  : "Create Menu"}
+              </button>
+            </form>
+          </Modal>
+        )}
       </div>
     </>
   );

@@ -715,7 +715,6 @@ const registerStudent=async(req,res)=>{
         // address validation
         if (
     !address ||
-    !address.village ||
     !address.city ||
     !address.state ||
     !address.pincode
@@ -4330,7 +4329,6 @@ const registerWorkers=async (req,res)=>{
         }
            if (
     !address ||
-    !address.village ||
     !address.city ||
     !address.state ||
     !address.pincode
@@ -4515,7 +4513,7 @@ const bookLunchBox=async (req,res)=>{
         }
         const now =new Date();
         const hour=now.getHours();
-        if(hour >=20){
+        if(hour >=23){
             return res.status(400).json({
                 message:"Lunchbox booking is closed! Booking is available from 12:00 AM to 9:00 AM."
             });
@@ -4574,7 +4572,7 @@ const cancelLunchBox=async(req,res)=>{
         const now=new Date();
         const hour=now.getHours();
 
-        if(hour>=20){
+        if(hour>=23){
             return res.status(400).json({
                 message:"Lunchbox cancellation is closed after 9:00 AM!"
             });
