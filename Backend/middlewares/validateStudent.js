@@ -48,14 +48,23 @@ const validateStudent = (data) => {
     }
 
     // phone validation
-    if (!validator.isMobilePhone(data.phoneNumber, 'en-IN') ) {
+    if (
+        !validator.isMobilePhone(
+            data.phoneNumber,
+            'en-IN'
+        )
+    ) {
         throw new Error(
             "Invalid student phone number"
         );
     }
 
     if (
-        !validator.isMobilePhone(data.guardianPhone,'en-IN' )) {
+        !validator.isMobilePhone(
+            data.guardianPhone,
+            'en-IN'
+        )
+    ) {
         throw new Error(
             "Invalid guardian phone number"
         );
@@ -68,7 +77,7 @@ const validateStudent = (data) => {
         );
     }
 
-    // aadhaar validation
+    // Aadhaar validation
     if (
         !/^[0-9]{12}$/.test(data.aadhar)
     ) {
@@ -79,7 +88,9 @@ const validateStudent = (data) => {
 
     // email validation
     if (!validator.isEmail(data.email)) {
-        throw new Error("Invalid email");
+        throw new Error(
+            "Invalid email"
+        );
     }
 
     // address validation
@@ -100,6 +111,8 @@ const validateStudent = (data) => {
         country
     } = data.address;
 
+    // Village is OPTIONAL
+    // City, state and pincode are REQUIRED
     if (
         !city ||
         !state ||
@@ -110,6 +123,7 @@ const validateStudent = (data) => {
         );
     }
 
+    // Village validation only if provided
     if (
         village &&
         village.length > 75
@@ -119,18 +133,21 @@ const validateStudent = (data) => {
         );
     }
 
+    // City validation
     if (city.length > 75) {
         throw new Error(
             "City name too long"
         );
     }
 
+    // State validation
     if (state.length > 50) {
         throw new Error(
             "State name too long"
         );
     }
 
+    // Pincode validation
     if (
         !validator.isPostalCode(
             pincode,
@@ -142,8 +159,9 @@ const validateStudent = (data) => {
         );
     }
 
+    // Country is optional
     if (
-        !country &&
+        country &&
         country.length > 75
     ) {
         throw new Error(
