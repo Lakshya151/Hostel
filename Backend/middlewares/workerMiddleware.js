@@ -1,64 +1,58 @@
-const User=require("../models/User");
-const Worker=require("../models/worker");
+const User = require("../models/User");
+const Worker = require("../models/worker");
 
-const workerMiddleware=async(req,res,next)=>{
+const workerMiddleware = async (req, res, next) => {
+    try {
 
-    try{
-
-        if(!req.result || !req.result._id){
-
+        // commonMiddleware should already authenticate the user
+        if (!req.result || !req.result._id) {
             return res.status(401).json({
-                message:"Unauthorized"
+                message: "Unauthorized"
             });
-
         }
 
-        const user=await User.findById(req.result._id);
+        // Find user
+        const user = await User.findById(req.result._id);
 
-        if(!user){
-
+        if (!user) {
             return res.status(404).json({
-                message:"User not found"
+                message: "User not found"
             });
-
         }
 
-        if(user.role!=="worker"){
-
+        // Check user role
+        if (user.role !== "worker") {
             return res.status(403).json({
-                message:"Worker access required"
+                message: "Worker access required"
             });
-
         }
 
-        const worker=await Worker.findOne({
-            userId:user._id,
-            workerType:"lunchbox",
-            isActive:true
+        // Check active lunchbox worker
+        const worker = await Worker.findOne({
+            userId: user._id,
+            workerType: "lunchbox",
+            isActive: true
         });
 
-        if(!worker){
-
+        if (!worker) {
             return res.status(403).json({
-                message:"Worker is not active"
+                message: "Worker is not active"
             });
-
         }
 
-        req.worker=worker;
+        // Attach worker to request
+        req.worker = worker;
 
         next();
 
-    }catch(error){
+    } catch (error) {
 
-        console.log(error);
+        console.error("Worker middleware error:", error);
 
         return res.status(500).json({
-            message:"Worker authorization failed"
+            message: "Worker authorization failed"
         });
-
     }
-
 };
 
-module.exports=workerMiddleware;
+module.exports = workerMiddleware;
