@@ -1,7 +1,7 @@
 const validator=require('validator');
 
 const validateAdmin= (data)=>{
-    const mandatoryField=['username','email','phoneNumber','aadhar','password'];
+    const mandatoryField=['username','email','phoneNumber','aadhar'];
     const isAllowed=mandatoryField.every((k)=>Object.keys(data).includes(k));
     if(!isAllowed){
         throw new Error("Required field/fields are missing");

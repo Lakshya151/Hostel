@@ -19,11 +19,15 @@ export const api = axios.create({
 */
 
 export const auth = {
+
   loginAdmin: (d) =>
     api.post("/loginAdmin", d),
 
   loginStudent: (d) =>
     api.post("/loginStudent", d),
+
+  loginWorker: (d) =>
+    api.post("/login/worker", d),
 
   verifyOtp: (d) =>
     api.post("/verifyOtp", d),
@@ -138,17 +142,14 @@ export const adminApi = {
   |--------------------------------------------------------------------------
   */
 
-  // All pending fees for admin
   pendingFees: (p) =>
     api.get("/getPendingFees", {
       params: p,
     }),
 
-  // Create fee structure
   createFee: (d) =>
     api.post("/createFeeStructure", d),
 
-  // Pending fee of a particular student
   studentPendingFees: (studentId) =>
     api.get(
       `/studentPendingFees/${studentId}`
@@ -187,12 +188,6 @@ export const adminApi = {
   createMenu: (d) =>
     api.post("/createMenu", d),
 
-  /*
-  |--------------------------------------------------------------------------
-  | Update Mess Menu
-  |--------------------------------------------------------------------------
-  */
-
   updateMenu: (day, type, d) =>
     api.patch(
       `/updateMessMenu/${encodeURIComponent(
@@ -200,12 +195,6 @@ export const adminApi = {
       )}/${encodeURIComponent(type)}`,
       d
     ),
-
-  /*
-  |--------------------------------------------------------------------------
-  | Delete Mess Menu
-  |--------------------------------------------------------------------------
-  */
 
   deleteMenu: (day, type) =>
     api.delete(
@@ -292,6 +281,23 @@ export const adminApi = {
     api.delete(
       `/deleteAnnouncement/${id}`
     ),
+
+  /*
+  |--------------------------------------------------------------------------
+  | Workers
+  |--------------------------------------------------------------------------
+  */
+
+  registerWorker: (d) =>
+    api.post(
+      "/register/worker",
+      d
+    ),
+
+  removeWorker: (id) =>
+    api.patch(
+      `/remove/worker/${id}`
+    ),
 };
 
 /*
@@ -334,11 +340,9 @@ export const studentApi = {
   |--------------------------------------------------------------------------
   */
 
-  // Existing complete fee information
   fees: () =>
     api.get("/getMyFees"),
 
-  // Pending fees of logged-in student
   pendingFees: () =>
     api.get(
       "/studentPendingFees"
@@ -396,6 +400,21 @@ export const studentApi = {
 
   todayMenu: () =>
     api.get("/todayMenu"),
+
+  /*
+  |--------------------------------------------------------------------------
+  | Lunchbox
+  |--------------------------------------------------------------------------
+  */
+
+  bookLunchBox: () =>
+    api.post("/lunchbox/book"),
+
+  cancelLunchBox: () =>
+    api.delete("/lunchbox/cancel"),
+
+  lunchBoxStatus: () =>
+    api.get("/lunchbox/my-status"),
 
   /*
   |--------------------------------------------------------------------------
@@ -458,5 +477,79 @@ export const studentApi = {
   contacts: () =>
     api.get(
       "/getAdminContacts"
+    ),
+};
+
+/*
+|--------------------------------------------------------------------------
+| WORKER APIs
+|--------------------------------------------------------------------------
+*/
+
+export const workerApi = {
+
+  /*
+  |--------------------------------------------------------------------------
+  | Login
+  |--------------------------------------------------------------------------
+  */
+
+  login: (d) =>
+    api.post(
+      "/login/worker",
+      d
+    ),
+
+  /*
+  |--------------------------------------------------------------------------
+  | Today's Lunchboxes
+  |--------------------------------------------------------------------------
+  */
+
+  todayLunchBoxes: () =>
+    api.get(
+      "/lunchbox/today"
+    ),
+
+  /*
+  |--------------------------------------------------------------------------
+  | Today's Lunchboxes By College
+  |--------------------------------------------------------------------------
+  */
+
+  todayLunchBoxesByCollege: (
+    collegeName
+  ) =>
+    api.get(
+      "/lunchbox/today/college",
+      {
+        params: {
+          collegeName,
+        },
+      }
+    ),
+
+  /*
+  |--------------------------------------------------------------------------
+  | Lunchbox Summary
+  |--------------------------------------------------------------------------
+  */
+
+  lunchBoxSummary: () =>
+    api.get(
+      "/lunchbox/today/summary"
+    ),
+
+  /*
+  |--------------------------------------------------------------------------
+  | Collect Lunchbox
+  |--------------------------------------------------------------------------
+  */
+
+  collectLunchBox: (
+    lunchBoxId
+  ) =>
+    api.patch(
+      `/lunchbox/collect/${lunchBoxId}`
     ),
 };

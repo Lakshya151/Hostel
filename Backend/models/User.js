@@ -10,7 +10,7 @@ const userSchema = new Schema({
         required:true,
         trim:true,
         minlength:2,
-        maxlength:40
+        maxlength:75
     },
 
     email:{
@@ -41,7 +41,7 @@ const userSchema = new Schema({
 
     role:{
         type:String,
-        enum:['admin','student'],
+        enum:['admin','student','worker'],
         default:"student"
     },
 

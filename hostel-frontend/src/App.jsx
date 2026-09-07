@@ -1,3 +1,6 @@
+
+
+// export default App;
 import React, {
   useEffect,
   useState,
@@ -20,6 +23,7 @@ import {
   api,
   adminApi,
   studentApi,
+  workerApi,
 } from "./api";
 
 import {
@@ -153,6 +157,13 @@ const navAdmin = [
     "/announcements",
     Megaphone,
   ],
+  ["Workers", "/workers", Users],
+  ["Profile", "/profile", UserRound],
+];
+
+const navWorker = [
+  ["Dashboard", "/", LayoutDashboard],
+  ["Lunchboxes", "/lunchboxes", Utensils],
   ["Profile", "/profile", UserRound],
 ];
 
@@ -188,6 +199,8 @@ function Shell({ children }) {
   const nav =
     user?.role === "admin"
       ? navAdmin
+      : user?.role === "worker"
+      ? navWorker
       : navStudent;
 
   const current = nav.find(
@@ -302,6 +315,10 @@ function Login() {
         await auth.loginAdmin({
           email,
         });
+      } else if (role === "worker") {
+        await auth.loginWorker({
+          email,
+        });
       } else {
         await auth.loginStudent({
           email,
@@ -367,6 +384,19 @@ function Login() {
             }
           >
             Admin
+          </button>
+
+          <button
+            className={
+              role === "worker"
+                ? "selected"
+                : ""
+            }
+            onClick={() =>
+              setRole("worker")
+            }
+          >
+            Worker
           </button>
         </div>
 
@@ -1058,6 +1088,226 @@ function StudentDashboard() {
             text="Today's menu is not available."
           />
         )}
+      </Card>
+    </>
+  );
+}
+
+/* =========================================================
+   WORKER REGISTRATION - ADMIN
+========================================================= */
+
+function WorkerRegistration() {
+  const [loading,setLoading]=useState(false);
+  const [error,setError]=useState("");
+  const [success,setSuccess]=useState("");
+
+  const emptyForm={
+    username:"",
+    email:"",
+    phoneNumber:"",
+    aadhar:"",
+    profilePic:"",
+    address:{
+      city:"",
+      state:"",
+      pincode:"",
+    },
+  };
+
+  const [form,setForm]=useState(emptyForm);
+
+  function updateField(field,value){
+    setForm(prev=>({
+      ...prev,
+      [field]:value,
+    }));
+  }
+
+  function updateAddress(field,value){
+    setForm(prev=>({
+      ...prev,
+      address:{
+        ...prev.address,
+        [field]:value,
+      },
+    }));
+  }
+
+  async function registerWorker(e){
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
+    try{
+      if(form.aadhar.length!==12){
+        throw new Error("Aadhaar number must be 12 digits.");
+      }
+
+      if(form.phoneNumber.length!==10){
+        throw new Error("Phone number must be 10 digits.");
+      }
+
+      if(form.address.pincode.length!==6){
+        throw new Error("Pincode must be 6 digits.");
+      }
+
+      await adminApi.registerWorker({
+        username:form.username.trim(),
+        email:form.email.trim().toLowerCase(),
+        phoneNumber:form.phoneNumber.trim(),
+        aadhar:form.aadhar.trim(),
+        profilePic:form.profilePic.trim(),
+        address:{
+          city:form.address.city.trim(),
+          state:form.address.state.trim(),
+          pincode:form.address.pincode.trim(),
+          country:"India",
+        },
+      });
+
+      setSuccess(
+        "Worker registered successfully. An OTP has been sent to the worker's email."
+      );
+
+      setForm(emptyForm);
+    }catch(e){
+      setError(
+        e.response?.data?.message ||
+        e.message ||
+        "Failed to register worker"
+      );
+    }finally{
+      setLoading(false);
+    }
+  }
+
+  return(
+    <>
+      <div className="welcome">
+        <p className="muted">Hostel Staff</p>
+        <h1>Register Worker</h1>
+        <p>
+          Create a lunchbox worker account for hostel operations.
+        </p>
+      </div>
+
+      <Card title="Worker Details">
+        <form onSubmit={registerWorker}>
+          <div className="formgrid">
+            <label>
+              Full Name *
+              <input
+                required
+                value={form.username}
+                onChange={e=>updateField("username",e.target.value)}
+                placeholder="Enter worker name"
+              />
+            </label>
+
+            <label>
+              Email *
+              <input
+                required
+                type="email"
+                value={form.email}
+                onChange={e=>updateField("email",e.target.value)}
+                placeholder="worker@example.com"
+              />
+            </label>
+
+            <label>
+              Phone Number *
+              <input
+                required
+                type="tel"
+                inputMode="numeric"
+                maxLength={10}
+                value={form.phoneNumber}
+                onChange={e=>updateField("phoneNumber",e.target.value.replace(/\D/g,""))}
+                placeholder="10 digit phone number"
+              />
+            </label>
+
+            <label>
+              Aadhaar Number *
+              <input
+                required
+                type="text"
+                inputMode="numeric"
+                maxLength={12}
+                value={form.aadhar}
+                onChange={e=>updateField("aadhar",e.target.value.replace(/\D/g,""))}
+                placeholder="12 digit Aadhaar number"
+              />
+            </label>
+
+            <label>
+              Profile Picture URL
+              <input
+                type="url"
+                value={form.profilePic}
+                onChange={e=>updateField("profilePic",e.target.value)}
+                placeholder="https://..."
+              />
+            </label>
+          </div>
+
+          <h3>Address</h3>
+
+          <div className="formgrid">
+            <label>
+              City *
+              <input
+                required
+                value={form.address.city}
+                onChange={e=>updateAddress("city",e.target.value)}
+                placeholder="Enter city"
+              />
+            </label>
+
+            <label>
+              State *
+              <input
+                required
+                value={form.address.state}
+                onChange={e=>updateAddress("state",e.target.value)}
+                placeholder="Enter state"
+              />
+            </label>
+
+            <label>
+              Pincode *
+              <input
+                required
+                type="text"
+                inputMode="numeric"
+                minLength={6}
+                maxLength={6}
+                value={form.address.pincode}
+                onChange={e=>updateAddress("pincode",e.target.value.replace(/\D/g,""))}
+                placeholder="6 digit pincode"
+              />
+            </label>
+          </div>
+
+          {error && <ErrorBox>{error}</ErrorBox>}
+
+          {success && (
+            <div className="success">
+              {success}
+            </div>
+          )}
+
+          <button
+            className="primary full"
+            disabled={loading}
+            type="submit"
+          >
+            {loading ? "Registering..." : "Register Worker"}
+          </button>
+        </form>
       </Card>
     </>
   );
@@ -4406,6 +4656,8 @@ function Mess({
 
   return (
     <>
+      {student && <LunchBoxBooking />}
+
       <div className="toolbar">
         <div>
           <h1>Mess Menu</h1>
@@ -4702,6 +4954,155 @@ function Mess({
         </Modal>
       )}
     </>
+  );
+}
+
+
+/* =========================================================
+   STUDENT LUNCHBOX
+========================================================= */
+
+function LunchBoxBooking() {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  async function load() {
+    try {
+      setLoading(true);
+      setError("");
+
+      const response =
+        await studentApi.lunchBoxStatus();
+
+      setData(response.data);
+    } catch (e) {
+      setError(
+        e.response?.data?.message ||
+          "Unable to load lunchbox status"
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function book() {
+    try {
+      setActionLoading(true);
+      setError("");
+
+      const response =
+        await studentApi.bookLunchBox();
+
+      setData(response.data);
+    } catch (e) {
+      setError(
+        e.response?.data?.message ||
+          "Unable to book lunchbox"
+      );
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function cancel() {
+    try {
+      setActionLoading(true);
+      setError("");
+
+      const response =
+        await studentApi.cancelLunchBox();
+
+      setData(response.data);
+    } catch (e) {
+      setError(
+        e.response?.data?.message ||
+          "Unable to cancel lunchbox"
+      );
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <Card title="Today's Lunchbox">
+        <Loading />
+      </Card>
+    );
+  }
+
+  const booked = Boolean(data?.booked);
+  const status = data?.status ||
+    data?.lunchBox?.status;
+
+  return (
+    <Card title="Today's Lunchbox">
+      {error && (
+        <ErrorBox>
+          {error}
+        </ErrorBox>
+      )}
+
+      {booked ? (
+        <>
+          <div className="row">
+            <span>Status</span>
+            <b>{status || "Booked"}</b>
+          </div>
+
+          {status === "collected" ? (
+            <div className="successbox">
+              Your lunchbox has been collected.
+            </div>
+          ) : (
+            <>
+              <p className="muted">
+                Your lunchbox is booked for today.
+                You can cancel it before 9:00 AM.
+              </p>
+
+              <button
+                className="secondary"
+                disabled={actionLoading}
+                onClick={cancel}
+              >
+                <X size={16} />
+                {actionLoading
+                  ? "Cancelling..."
+                  : "Cancel Lunchbox"}
+              </button>
+            </>
+          )}
+        </>
+      ) : (
+        <>
+          <p>
+            Do you want a lunchbox for today?
+          </p>
+
+          <p className="muted">
+            Booking is available until 9:00 AM.
+          </p>
+
+          <button
+            className="primary"
+            disabled={actionLoading}
+            onClick={book}
+          >
+            <Check size={16} />
+            {actionLoading
+              ? "Booking..."
+              : "Yes, Book Lunchbox"}
+          </button>
+        </>
+      )}
+    </Card>
   );
 }
 
@@ -5919,6 +6320,366 @@ function SimpleOuting() {
   );
 }
 
+
+/* =========================================================
+   WORKER DASHBOARD
+========================================================= */
+
+function WorkerDashboard() {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    workerApi
+      .lunchBoxSummary()
+      .then((response) =>
+        setData(response.data)
+      )
+      .catch((e) =>
+        setError(
+          e.response?.data?.message ||
+            "Failed to load lunchbox summary"
+        )
+      );
+  }, []);
+
+  if (error) {
+    return <ErrorBox>{error}</ErrorBox>;
+  }
+
+  if (!data) {
+    return <Loading />;
+  }
+
+  return (
+    <>
+      <div className="welcome">
+        <p className="muted">
+          Welcome back
+        </p>
+
+        <h1>
+          Lunchbox Dashboard
+        </h1>
+
+        <p>
+          Manage today's student lunchboxes.
+        </p>
+      </div>
+
+      <div className="stats">
+        <Stat
+          label="Total Booked"
+          value={data.totalBooked ?? data.total ?? 0}
+          icon={Utensils}
+        />
+
+        <Stat
+          label="Collected"
+          value={data.totalCollected ?? 0}
+          icon={Check}
+        />
+
+        <Stat
+          label="Pending"
+          value={data.totalPending ?? 0}
+          icon={Utensils}
+        />
+      </div>
+
+      <Card title="Today's Summary">
+        <p>
+          Date: <b>{data.date || "Today"}</b>
+        </p>
+
+        <Link
+          className="primary"
+          to="/lunchboxes"
+        >
+          View Today's Lunchboxes
+        </Link>
+      </Card>
+    </>
+  );
+}
+
+/* =========================================================
+   WORKER LUNCHBOXES
+========================================================= */
+
+function WorkerLunchBoxes() {
+  const [data, setData] = useState(null);
+  const [summary, setSummary] = useState(null);
+  const [collegeName, setCollegeName] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [collecting, setCollecting] = useState("");
+
+  async function load() {
+    try {
+      setLoading(true);
+      setError("");
+
+      const [listResponse, summaryResponse] =
+        await Promise.all([
+          collegeName.trim()
+            ? workerApi.todayLunchBoxesByCollege(
+                collegeName.trim()
+              )
+            : workerApi.todayLunchBoxes(),
+          workerApi.lunchBoxSummary(),
+        ]);
+
+      setData(listResponse.data);
+      setSummary(summaryResponse.data);
+    } catch (e) {
+      setError(
+        e.response?.data?.message ||
+          "Unable to load today's lunchboxes"
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function searchCollege(e) {
+    e.preventDefault();
+    await load();
+  }
+
+  async function collect(id) {
+    try {
+      setCollecting(id);
+      setError("");
+
+      await workerApi.collectLunchBox(id);
+      await load();
+    } catch (e) {
+      setError(
+        e.response?.data?.message ||
+          "Unable to collect lunchbox"
+      );
+    } finally {
+      setCollecting("");
+    }
+  }
+
+  const lunchBoxes =
+    data?.lunchBoxes ||
+    data?.data ||
+    (Array.isArray(data) ? data : []);
+
+  return (
+    <>
+      <div className="toolbar">
+        <div>
+          <h1>Today's Lunchboxes</h1>
+
+          <p className="muted">
+            View booked lunchboxes and mark them as collected.
+          </p>
+        </div>
+
+        <button
+          className="secondary"
+          onClick={load}
+          disabled={loading}
+        >
+          Refresh
+        </button>
+      </div>
+
+      {error && (
+        <ErrorBox>
+          {error}
+        </ErrorBox>
+      )}
+
+      <div className="stats">
+        <Stat
+          label="Booked"
+          value={
+            summary?.totalBooked ??
+            data?.total ??
+            lunchBoxes.length
+          }
+          icon={Utensils}
+        />
+
+        <Stat
+          label="Collected"
+          value={summary?.totalCollected ?? 0}
+          icon={Check}
+        />
+
+        <Stat
+          label="Pending"
+          value={summary?.totalPending ?? 0}
+          icon={Utensils}
+        />
+      </div>
+
+      <Card title="Search By College">
+        <form
+          className="toolbar"
+          onSubmit={searchCollege}
+        >
+          <input
+            value={collegeName}
+            onChange={(e) =>
+              setCollegeName(e.target.value)
+            }
+            placeholder="Enter college name"
+          />
+
+          <button
+            className="primary"
+            type="submit"
+          >
+            <Search size={16} />
+            Search
+          </button>
+
+          <button
+            className="secondary"
+            type="button"
+            onClick={() => {
+              setCollegeName("");
+              setTimeout(load, 0);
+            }}
+          >
+            Clear
+          </button>
+        </form>
+      </Card>
+
+      <Card
+        title={
+          collegeName.trim()
+            ? `Lunchboxes - ${collegeName}`
+            : "Booked Students"
+        }
+      >
+        {loading ? (
+          <Loading />
+        ) : (
+          <Table
+            columns={[
+              {
+                key: "student",
+                label: "Student",
+                render: (item) =>
+                  item.studentId?.userId?.username ||
+                  "—",
+              },
+              {
+                key: "room",
+                label: "Room",
+                render: (item) =>
+                  item.studentId?.roomNo ||
+                  "—",
+              },
+              {
+                key: "college",
+                label: "College",
+                render: (item) =>
+                  item.studentId?.collegeName ||
+                  item.collegeName ||
+                  "—",
+              },
+              {
+                key: "phone",
+                label: "Phone",
+                render: (item) =>
+                  item.studentId?.userId?.phoneNumber ||
+                  "—",
+              },
+              {
+                key: "status",
+                label: "Status",
+                render: (item) =>
+                  item.status || "booked",
+              },
+            ]}
+            rows={lunchBoxes}
+            actions={(item) =>
+              item.status === "collected" ? (
+                <span className="badge">
+                  Collected
+                </span>
+              ) : (
+                <button
+                  className="primary"
+                  disabled={collecting === item._id}
+                  onClick={() =>
+                    collect(item._id)
+                  }
+                >
+                  <Check size={15} />
+                  {collecting === item._id
+                    ? "Collecting..."
+                    : "Collect"}
+                </button>
+              )
+            }
+          />
+        )}
+      </Card>
+    </>
+  );
+}
+
+/* =========================================================
+   WORKER PROFILE
+========================================================= */
+
+function WorkerProfile() {
+  const { user } = useAuth();
+
+  return (
+    <>
+      <h1>Worker Profile</h1>
+
+      <p className="muted">
+        Your worker account information.
+      </p>
+
+      <Card title="Profile Information">
+        <div className="meal-lines">
+          <p>
+            <b>Name</b>
+            {user?.username || "—"}
+          </p>
+
+          <p>
+            <b>Email</b>
+            {user?.email || "—"}
+          </p>
+
+          <p>
+            <b>Phone</b>
+            {user?.phoneNumber || "—"}
+          </p>
+
+          <p>
+            <b>Role</b>
+            Worker
+          </p>
+
+          <p>
+            <b>Worker Type</b>
+            Lunchbox
+          </p>
+        </div>
+      </Card>
+    </>
+  );
+}
+
 /* =========================================================
    ROUTER
 ========================================================= */
@@ -5930,6 +6691,9 @@ function PageRouter() {
   const isAdmin =
     user?.role === "admin";
 
+  const isWorker =
+    user?.role === "worker";
+
   return (
     <Shell>
       <Routes>
@@ -5938,6 +6702,8 @@ function PageRouter() {
           element={
             isAdmin ? (
               <AdminDashboard />
+            ) : isWorker ? (
+              <WorkerDashboard />
             ) : (
               <StudentDashboard />
             )
@@ -5948,143 +6714,122 @@ function PageRouter() {
           <>
             <Route
               path="/students"
-              element={
-                <Students />
-              }
+              element={<Students />}
+            />
+
+            <Route
+              path="/workers"
+              element={<WorkerRegistration />}
             />
 
             <Route
               path="/students/:id"
-              element={
-                <StudentDetails />
-              }
+              element={<StudentDetails />}
             />
 
             <Route
               path="/rooms"
-              element={
-                <Rooms />
-              }
+              element={<Rooms />}
             />
 
             <Route
               path="/fees"
-              element={
-                <Fees />
-              }
+              element={<Fees />}
             />
 
             <Route
               path="/complaints"
-              element={
-                <Complaints />
-              }
+              element={<Complaints />}
             />
 
             <Route
               path="/mess"
-              element={
-                <Mess />
-              }
+              element={<Mess />}
             />
 
             <Route
               path="/bus"
-              element={
-                <BusPage />
-              }
+              element={<BusPage />}
             />
 
             <Route
               path="/kyc"
-              element={
-                <KYC />
-              }
+              element={<KYC />}
             />
 
             <Route
               path="/outings"
-              element={
-                <Outings />
-              }
+              element={<Outings />}
             />
 
             <Route
               path="/announcements"
-              element={
-                <Announcements />
-              }
+              element={<Announcements />}
             />
 
             <Route
               path="/profile"
-              element={
-                <Profile />
-              }
+              element={<Profile />}
             />
           </>
         )}
 
-        {!isAdmin && (
+        {isWorker && (
+          <>
+            <Route
+              path="/lunchboxes"
+              element={<WorkerLunchBoxes />}
+            />
+
+            <Route
+              path="/profile"
+              element={<WorkerProfile />}
+            />
+          </>
+        )}
+
+        {!isAdmin && !isWorker && (
           <>
             <Route
               path="/fees"
-              element={
-                <Fees student />
-              }
+              element={<Fees student />}
             />
 
             <Route
               path="/complaints"
-              element={
-                <Complaints student />
-              }
+              element={<Complaints student />}
             />
 
             <Route
               path="/mess"
-              element={
-                <Mess student />
-              }
+              element={<Mess student />}
             />
 
             <Route
               path="/bus"
-              element={
-                <BusPage student />
-              }
+              element={<BusPage student />}
             />
 
             <Route
               path="/outing"
-              element={
-                <SimpleOuting />
-              }
+              element={<SimpleOuting />}
             />
 
             <Route
               path="/kyc"
-              element={
-                <KYC student />
-              }
+              element={<KYC student />}
             />
 
             <Route
               path="/announcements"
               element={
-                <Announcements
-                  student
-                />
+                <Announcements student />
               }
             />
 
             <Route
               path="/profile"
-              element={
-                <Profile
-                  student
-                />
-              }
+              element={<Profile student />}
             />
           </>
         )}
