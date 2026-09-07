@@ -1,7 +1,8 @@
 const express=require('express');
 const adminMiddleware=require('../middlewares/adminMiddleware');
 const studentMiddleware=require('../middlewares/studentMiddleware');
-const commonMiddleware=require('../middlewares/commonMiddleware')
+const commonMiddleware=require('../middlewares/commonMiddleware');
+const workerMiddleware=require("../middlewares/workerMiddleware");
 const redisClient=require('../config/redis');
 const {registerAdmin,registerStudent,loginAdmin,loginStudent, searchStudent,
      isSpace, createMenu,
@@ -58,6 +59,16 @@ const {registerAdmin,registerStudent,loginAdmin,loginStudent, searchStudent,
      updateAnnouncement,
      getAnnouncements,
      deleteAnnouncement,
+     registerWorkers,
+    loginWorker,
+    removeWorker,
+    bookLunchBox,
+    cancelLunchBox,
+    getMyLunchBoxStatus,
+    collectLunchBox,
+    getTodayLunchBoxes,
+    getTodayLunchBoxesByCollege,
+    getTodayLunchBoxSummary,
      myComplaints,updateStudentInstallmentByAdmin}=require('../controllers/authRandL');
 const validateStudent = require('../middlewares/validateStudent');
 
@@ -195,5 +206,45 @@ router.put(
     "/students/:studentId/installments/:installmentId",
     adminMiddleware,
     updateStudentInstallmentByAdmin
+);
+//worker management
+router.post("/register/worker",adminMiddleware,registerWorkers);
+
+router.post("/login/worker",loginWorker);
+
+router.patch("/remove/worker/:_id",adminMiddleware,removeWorker);
+
+
+//lunchbox for student
+router.post("/lunchbox/book",studentMiddleware,bookLunchBox);
+
+router.delete("/lunchbox/cancel",studentMiddleware,cancelLunchBox);
+
+router.get("/lunchbox/my-status",studentMiddleware,getMyLunchBoxStatus);
+
+
+//lunchbox for worker
+router.patch(
+    "/lunchbox/collect/:lunchBoxId",
+    workerMiddleware,
+    collectLunchBox
+);
+
+router.get(
+    "/lunchbox/today",
+    workerMiddleware,
+    getTodayLunchBoxes
+);
+
+router.get(
+    "/lunchbox/today/college",
+    workerMiddleware,
+    getTodayLunchBoxesByCollege
+);
+
+router.get(
+    "/lunchbox/today/summary",
+    workerMiddleware,
+    getTodayLunchBoxSummary
 );
 module.exports=router;

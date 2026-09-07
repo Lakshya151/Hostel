@@ -112,14 +112,14 @@ const validateStudent = (data) => {
 
     if (
         village &&
-        village.length > 50
+        village.length > 75
     ) {
         throw new Error(
             "Village name too long"
         );
     }
 
-    if (city.length > 50) {
+    if (city.length > 75) {
         throw new Error(
             "City name too long"
         );
@@ -143,8 +143,8 @@ const validateStudent = (data) => {
     }
 
     if (
-        country &&
-        country.length > 50
+        !country &&
+        country.length > 75
     ) {
         throw new Error(
             "Country name too long"

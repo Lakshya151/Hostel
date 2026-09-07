@@ -14,8 +14,12 @@ const jwt = require('jsonwebtoken');
 const redisClient=require('../config/redis');
 const validateAdmin=require('../middlewares/validateAdmin');
 const validateStudent=require('../middlewares/validateStudent');
+const validateWorker=require('../middlewares/validateWorker');
 const validator = require("validator");
 const validateBus = require('../utils/validateBus');
+const worker = require('../models/worker');
+const lunchbox=require('../models/LunchBox');
+const LunchBox = require('../models/LunchBox');
 
 
 
@@ -75,6 +79,7 @@ const verifyOTP = async (req, res) => {
 
         res.status(200).json({
             message: "Login successful",
+            token,
             user: {
                 _id: user._id,
                 username: user.username,
@@ -459,121 +464,383 @@ const loginAdmin = async (req, res) => {
     }
 };
 //register new Student
+// const registerStudent=async(req,res)=>{
+//     try{
+//         validateStudent(req.body);
+//         const {username,email,phoneNumber,aadhar,
+//             roomNo,course,year,guardianName,collegeName,
+//             guardianPhone,totalFee,profilePic,registrationFee,address}=req.body;
+
+//         const normalizedEmail = email.trim().toLowerCase();
+//         const isRegister=await User.findOne({email:normalizedEmail});
+//         if(profilePic && !validator.isURL(profilePic)){
+//             throw new Error("Invalid profile picture URL");
+//         }
+//         if(isRegister){
+//             return res.status(409).json({
+//                 message:"Student already register!"
+//             })
+//         }
+//         let room=await Room.findOne({roomNo});
+
+//         if (!room) {
+//             // return res.status(404).json({
+//             //     message: "Room not found!"
+//             // });
+//             try{const {roomNo,floor,capacity, type,isAC}=req.body;
+//             if(!roomNo ||!capacity){
+//                 return res.status(400).json({
+//                     message:"Room number and capacity is required!"
+//                 })
+//             }
+//                 let room=await Room.create({roomNo,floor,capacity,
+//                 type,isAC,student:[]
+//             })}
+//             catch(err){
+//                 console.error(err);
+
+//             res.status(500).json({
+//                 message: err.message,
+//                 stack: err.stack
+//             });
+//             }
+//         }
+
+//         const occupied=room.student.length;
+//         if(occupied>=room.capacity){
+//             return res.status(400).json({
+//                 message: "Room is already full!"
+//             });
+//         }
+         
+//          if(registrationFee === undefined || registrationFee <= 0){
+//             return res.status(400).json({
+//                 message:"Valid registration fee required!"
+//             });
+//         }
+        
+//         // address validation
+//         if (!address ||!address.city ||!address.state || !address.pincode) {
+//             return res.status(400).json({
+//                 message:
+//                     "Complete address is required!"
+//             });
+//         }
+//         const normalizedTotalFee = Number(totalFee);
+
+// if (
+//     !Number.isFinite(normalizedTotalFee) ||
+//     normalizedTotalFee <= 0
+// ) {
+//     return res.status(400).json({
+//         message: "Valid total fee required!"
+//     });
+// }
+
+// const totalPaise = Math.round(normalizedTotalFee * 100);
+
+// // 1st installment = 50%
+// const firstInstallmentPaise = Math.floor(totalPaise / 2);
+
+// // Remaining 50%
+// const remainingPaise = totalPaise - firstInstallmentPaise;
+
+// // Divide remaining into 3 installments
+// const eachInstallmentPaise = Math.floor(remainingPaise / 3);
+
+// // Last installment gets rounding difference
+// const lastInstallmentPaise =
+//     remainingPaise - (eachInstallmentPaise * 2);
+
+// const installments = [
+//     {
+//         amount: firstInstallmentPaise / 100,
+//         status: "pending"
+//     },
+//     {
+//         amount: eachInstallmentPaise / 100,
+//         status: "pending"
+//     },
+//     {
+//         amount: eachInstallmentPaise / 100,
+//         status: "pending"
+//     },
+//     {
+//         amount: lastInstallmentPaise / 100,
+//         status: "pending"
+//     }
+// ];
+//         const otp=generateOTP();
+
+//         const newUser=await User.create({username,email:normalizedEmail,phoneNumber,aadhar,address,role:"student",profilePic,isResident:true
+//             ,emailOTP: otp,
+//             mobileOTP: otp,
+//             otpExpiry: Date.now() + 5 * 60 * 1000
+//         });
+        
+//         //SEND REGISTRATION OTP
+//         await sendMail(
+//             normalizedEmail,
+//             "Hostel Registration OTP",
+//             `
+//             <h2>Welcome to Hostel Management</h2>
+
+//             <p>Your OTP is:</p>
+
+//             <h1>${otp}</h1>
+
+//             <p>
+//                 OTP valid for 5 minutes.
+//             </p>
+//             `
+//         );
+//         const createdBy = req.result._id;
+//         try{
+//             let newStudent=await Student.create({userId:newUser._id,roomNo,course,collegeName,year,guardianName,guardianPhone});
+      
+//             let registrationFeeRecord=await Fee.create({studentId:newStudent._id,createdBy,feeType:"registration",
+//                 totalAmount:registrationFee,totalPaid:registrationFee,
+//                 installments:[
+//                         {
+//                             amount:registrationFee,
+//                             status:"paid",
+//                             paidAt:new Date()
+//                         }
+//                     ]
+//             });
+//             let totalFeeRecord = await Fee.create({
+//                 studentId: newStudent._id,
+//                 createdBy,
+//                 feeType: "hostel",
+//                 totalAmount: normalizedTotalFee,
+//                 totalPaid: 0,
+//                 installments
+//             });
+
+//             room.student.push(newUser._id);
+//             await room.save();
+//         }catch (err) {
+//            await Student.findByIdAndDelete(newStudent._id);
+//             await User.findByIdAndDelete(newUser._id);
+//             throw err;
+//         }
+        
+       
+
+//         res.status(201).json({
+//             message:"Register Successfull!",
+//             user: {
+//                 _id: newUser._id,
+//                 username: newUser.username,
+//                 email:normalizedEmail,
+//                 role: newUser.role,
+//                 phoneNumber: newUser.phoneNumber,
+//                 profilePic,
+//                 address
+//             },
+//             Student:newStudent,
+//             occupiedStudent: room.student.length,
+//             availableSeat: room.capacity - room.student.length,
+//             registrationFee: registrationFeeRecord
+//         })
+//     }catch(err){
+//         res.status(500).json({
+//             message:err.message
+//         })
+//     }
+// }
+
 const registerStudent=async(req,res)=>{
     try{
         validateStudent(req.body);
+
         const {username,email,phoneNumber,aadhar,
             roomNo,course,year,guardianName,collegeName,
             guardianPhone,totalFee,profilePic,registrationFee,address}=req.body;
 
-        const normalizedEmail = email.trim().toLowerCase();
+        const normalizedEmail=email.trim().toLowerCase();
+
         const isRegister=await User.findOne({email:normalizedEmail});
+
         if(profilePic && !validator.isURL(profilePic)){
             throw new Error("Invalid profile picture URL");
         }
+
         if(isRegister){
             return res.status(409).json({
                 message:"Student already register!"
             })
         }
+
         let room=await Room.findOne({roomNo});
 
-        if (!room) {
-            // return res.status(404).json({
-            //     message: "Room not found!"
-            // });
-            try{const {roomNo,floor,capacity, type,isAC}=req.body;
-            if(!roomNo ||!capacity){
+        if(!room){
+            const {roomNo,floor,capacity,type,isAC}=req.body;
+
+            if(!roomNo || !capacity){
                 return res.status(400).json({
                     message:"Room number and capacity is required!"
                 })
             }
-                const room=await Room.create({roomNo,floor,capacity,
-                type,isAC,student:[]
-            })}
-            catch(err){
-                console.error(err);
 
-            res.status(500).json({
-                message: err.message,
-                stack: err.stack
+            room=await Room.create({
+                roomNo,
+                floor,
+                capacity,
+                type,
+                isAC,
+                student:[]
             });
-            }
         }
 
         const occupied=room.student.length;
+
         if(occupied>=room.capacity){
             return res.status(400).json({
-                message: "Room is already full!"
+                message:"Room is already full!"
             });
         }
-         
-         if(registrationFee === undefined || registrationFee <= 0){
+
+        const normalizedRegistrationFee=Number(registrationFee);
+
+        if(
+            !Number.isFinite(normalizedRegistrationFee) ||
+            normalizedRegistrationFee<=0
+        ){
             return res.status(400).json({
                 message:"Valid registration fee required!"
             });
         }
-        
+
         // address validation
-        if (!address ||!address.city ||!address.state || !address.pincode) {
+        if(!address || !address.city || !address.state || !address.pincode){
             return res.status(400).json({
-                message:
-                    "Complete address is required!"
+                message:"Complete address is required!"
             });
         }
-        const normalizedTotalFee = Number(totalFee);
 
-if (
-    !Number.isFinite(normalizedTotalFee) ||
-    normalizedTotalFee <= 0
-) {
-    return res.status(400).json({
-        message: "Valid total fee required!"
-    });
-}
+        const normalizedTotalFee=Number(totalFee);
 
-const totalPaise = Math.round(normalizedTotalFee * 100);
+        if(
+            !Number.isFinite(normalizedTotalFee) ||
+            normalizedTotalFee<=0
+        ){
+            return res.status(400).json({
+                message:"Valid total fee required!"
+            });
+        }
 
-// 1st installment = 50%
-const firstInstallmentPaise = Math.floor(totalPaise / 2);
+        const totalPaise=Math.round(normalizedTotalFee*100);
 
-// Remaining 50%
-const remainingPaise = totalPaise - firstInstallmentPaise;
+        // 1st installment = 50%
+        const firstInstallmentPaise=Math.floor(totalPaise/2);
 
-// Divide remaining into 3 installments
-const eachInstallmentPaise = Math.floor(remainingPaise / 3);
+        // Remaining 50%
+        const remainingPaise=totalPaise-firstInstallmentPaise;
 
-// Last installment gets rounding difference
-const lastInstallmentPaise =
-    remainingPaise - (eachInstallmentPaise * 2);
+        // Divide remaining into 3 installments
+        const eachInstallmentPaise=Math.floor(remainingPaise/3);
 
-const installments = [
-    {
-        amount: firstInstallmentPaise / 100,
-        status: "pending"
-    },
-    {
-        amount: eachInstallmentPaise / 100,
-        status: "pending"
-    },
-    {
-        amount: eachInstallmentPaise / 100,
-        status: "pending"
-    },
-    {
-        amount: lastInstallmentPaise / 100,
-        status: "pending"
-    }
-];
+        // Last installment gets rounding difference
+        const lastInstallmentPaise=
+            remainingPaise-(eachInstallmentPaise*2);
+
+        const installments=[
+            {
+                amount:firstInstallmentPaise/100,
+                status:"pending"
+            },
+            {
+                amount:eachInstallmentPaise/100,
+                status:"pending"
+            },
+            {
+                amount:eachInstallmentPaise/100,
+                status:"pending"
+            },
+            {
+                amount:lastInstallmentPaise/100,
+                status:"pending"
+            }
+        ];
+
         const otp=generateOTP();
 
-        const newUser=await User.create({username,email:normalizedEmail,phoneNumber,aadhar,address,role:"student",profilePic,isResident:true
-            ,emailOTP: otp,
-            mobileOTP: otp,
-            otpExpiry: Date.now() + 5 * 60 * 1000
+        const newUser=await User.create({
+            username,
+            email:normalizedEmail,
+            phoneNumber,
+            aadhar,
+            address,
+            role:"student",
+            profilePic,
+            isResident:true,
+            emailOTP:otp,
+            mobileOTP:otp,
+            otpExpiry:Date.now()+5*60*1000
         });
-        
-        //SEND REGISTRATION OTP
+
+        const createdBy=req.result._id;
+
+        let newStudent;
+        let registrationFeeRecord;
+        let totalFeeRecord;
+
+        try{
+
+            newStudent=await Student.create({
+                userId:newUser._id,
+                roomNo,
+                course,
+                collegeName,
+                year,
+                guardianName,
+                guardianPhone
+            });
+
+            registrationFeeRecord=await Fee.create({
+                studentId:newStudent._id,
+                createdBy,
+                feeType:"registration",
+                totalAmount:normalizedRegistrationFee,
+                totalPaid:normalizedRegistrationFee,
+                installments:[
+                    {
+                        amount:normalizedRegistrationFee,
+                        status:"paid",
+                        paidAt:new Date()
+                    }
+                ]
+            });
+
+            totalFeeRecord=await Fee.create({
+                studentId:newStudent._id,
+                createdBy,
+                feeType:"hostel",
+                totalAmount:normalizedTotalFee,
+                totalPaid:0,
+                installments
+            });
+
+            room.student.push(newUser._id);
+            await room.save();
+
+        }catch(err){
+
+            if(newStudent){
+                await Fee.deleteMany({
+                    studentId:newStudent._id
+                });
+
+                await Student.findByIdAndDelete(newStudent._id);
+            }
+
+            await User.findByIdAndDelete(newUser._id);
+
+            throw err;
+        }
+
+        // SEND REGISTRATION OTP
         await sendMail(
             normalizedEmail,
             "Hostel Registration OTP",
@@ -589,56 +856,32 @@ const installments = [
             </p>
             `
         );
-        const createdBy = req.result._id;
-        const newStudent=await Student.create({userId:newUser._id,roomNo,course,collegeName,year,guardianName,guardianPhone});
-      
-        const registrationFeeRecord=await Fee.create({studentId:newStudent._id,createdBy,feeType:"registration",
-            totalAmount:registrationFee,totalPaid:registrationFee,
-            installments:[
-                    {
-                        amount:registrationFee,
-                        status:"paid",
-                        paidAt:new Date()
-                    }
-                ]
-        });
-        const totalFeeRecord = await Fee.create({
-    studentId: newStudent._id,
-    createdBy,
-    feeType: "hostel",
-    totalAmount: normalizedTotalFee,
-    totalPaid: 0,
-    installments
-});
-
-        room.student.push(newUser._id);
-        await room.save();
-
-        
-       
 
         res.status(201).json({
             message:"Register Successfull!",
-            user: {
-                _id: newUser._id,
-                username: newUser.username,
+            user:{
+                _id:newUser._id,
+                username:newUser.username,
                 email:normalizedEmail,
-                role: newUser.role,
-                phoneNumber: newUser.phoneNumber,
-                profilePic,
-                address
+                role:newUser.role,
+                phoneNumber:newUser.phoneNumber,
+                profilePic:newUser.profilePic,
+                address:newUser.address
             },
             Student:newStudent,
-            occupiedStudent: room.student.length,
-            availableSeat: room.capacity - room.student.length,
-            registrationFee: registrationFeeRecord
-        })
+            occupiedStudent:room.student.length,
+            availableSeat:room.capacity-room.student.length,
+            registrationFee:registrationFeeRecord,
+            hostelFee:totalFeeRecord
+        });
+
     }catch(err){
         res.status(500).json({
             message:err.message
         })
     }
 }
+
 //login as student
 const loginStudent = async (req, res) => {
 
@@ -4063,6 +4306,592 @@ const deleteAnnouncement = async (req, res) => {
         });
     }
 };
+
+
+//Management register
+const registerWorkers=async (req,res)=>{
+    try{
+        validateWorker(req.body);
+        const {username,email,phoneNumber,aadhar,profilePic,address}=req.body;
+        const normalizedEmail=email.trim().toLowerCase();
+        const isRegister=await User.findOne({email:normalizedEmail});
+        if(isRegister){
+            return res.status(409).json({
+                message:"Worker already exists!"
+            })
+        }
+        if(profilePic && !validator.isURL(profilePic)){
+            throw new Error("Invalid profile picture URL");
+        }
+        if (!address ||!address.city ||!address.state || !address.pincode) {
+            return res.status(400).json({
+                message:
+                    "Complete address is required!"
+            });
+        }
+        const otp=generateOTP();
+
+        const newUser = await User.create({
+            username,
+            email: normalizedEmail,
+            phoneNumber,
+            aadhar,
+            address,
+            role: "worker",
+            profilePic,
+            isResident: true,
+            emailOTP: otp,
+            mobileOTP: otp,
+            otpExpiry: Date.now() + 5 * 60 * 1000
+        });
+        let newWorker;
+        try {
+            newWorker = await Worker.create({
+                userId: newUser._id
+                });
+
+        } catch (err) {
+            await User.findByIdAndDelete(newUser._id);
+            throw err;
+        }
+        
+        //SEND REGISTRATION OTP
+        await sendMail(
+            normalizedEmail,
+            "Hostel Registration OTP",
+            `
+            <h2>Welcome to Hostel Management</h2>
+
+            <p>Your OTP is:</p>
+
+            <h1>${otp}</h1>
+
+            <p>
+                OTP valid for 5 minutes.
+            </p>
+            `
+        );
+
+        res.status(201).json({
+            message:"Register Successfully",
+            user:{
+                _id:newUser._id,
+                username:newUser.username,
+                phoneNumber:newUser.phoneNumber,
+                profilePic,
+                address
+            },
+            worker: {
+                _id: newWorker._id,
+                workerType: newWorker.workerType,
+                isActive: newWorker.isActive
+            }
+
+        })
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        })
+    }
+}
+//login worker
+const loginWorker=async(req,res)=>{
+    try{
+        const {email}=req.body;
+        if(!email){
+            throw new Error("Email Required!");
+        }
+        const normalizedEmail=email.trim().toLowerCase();
+        const user=await User.findOne({email:normalizedEmail});
+        if(!user){
+            throw new Error("Worker is not registerd !");
+        }
+        if(user.role !="worker"){
+            throw new Error("Access denied!");
+        }
+        const worker=await Worker.findOne({
+            userId:user._id
+        });
+
+        if(!worker){
+            throw new Error("Worker not found!");
+        }
+
+        if(!worker.isActive){
+            return res.status(403).json({
+                message:"Worker account is inactive!"
+            });
+        }
+        const otp = generateOTP();
+
+        user.emailOTP = otp;
+        user.mobileOTP = otp;
+
+        user.otpExpiry =Date.now() + 5 * 60 * 1000;
+        await user.save();
+        //send email
+        await sendMail(
+            user.email,
+            "Login OTP",
+            `
+            <h2>Hostel Login OTP</h2>
+
+            <h1>${otp}</h1>
+
+            <p>OTP valid for 5 minutes.</p>
+            `
+        );
+        res.status(200).json({
+            message:
+                "OTP sent to email and mobile"
+        });
+    }catch(err){
+        res.status(500).json({
+            message: err.message
+        });
+    }
+}
+//remove worker
+const removeWorker=async (req,res)=>{
+    try{
+        const {_id}=req.params;
+        if(!_id){
+            return res.status(400).json({
+                message:"Worker id Require !"
+            })
+        }
+        //deactivate from worker schema
+        const worker=await Worker.findOne({userId:_id});
+        if(!worker){
+            return res.status(404).json({
+                message:"Worker not found!"
+            })
+        }
+        //delete from user schema
+        const user=await User.findById(_id);
+        if(!user){
+            return res.status(404).json({
+                message:"User not found!"
+            })
+        }
+        worker.isActive=false;
+        user.isResident=false;
+        await user.save();
+        await  worker.save();
+        res.status(200).json({
+            message:"Worker removed from the hostel Successfully!"
+        })
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        })
+    }
+}
+
+//lunch box book api , for students 
+const bookLunchBox=async (req,res)=>{
+    try{
+        const userId=req.result._id;
+        const user=await User.findById(userId);
+        if(!user){
+            return res.status(404).json({
+                message:"User not found !"
+            })
+        }
+        if(user.role!="student"){
+            return res.status(403).json({
+                message:"Only students can book lunchbox!"
+            })
+        }
+        const now =new Date();
+        const hour=now.getHours();
+        if(hour >=9){
+            return res.status(400).json({
+                message:"Lunchbox booking is closed! Booking is available from 12:00 AM to 9:00 AM."
+            });
+        }
+        const today=now.toISOString().split("T")[0];
+        
+        const student=await Student.findOne({userId:userId});
+        if(!student){
+            return res.status(404).json({
+                message:"Student not found !"
+            })
+        }
+        const alreadyBooked=await LunchBox.findOne({
+            studentId:student._id,
+            date:today
+        })
+
+        if(alreadyBooked){
+            return res.status(409).json({
+                message:"Lunch already Booked !"
+            })
+        }
+        const lunchBox=await LunchBox.create({
+            studentId:student._id,
+            date:today,
+            status:"booked"
+        })
+        res.status(201).json({
+            message:"Lunchbox booked successfully!",
+            lunchBox
+        });
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        });
+    }
+}
+//unbook lunch box
+const cancelLunchBox=async(req,res)=>{
+    try{
+
+        const userId=req.result._id;
+        const user=await User.findById(userId);
+        if(!user){
+            return res.status(404).json({
+                message:"User not found!"
+            });
+        }
+
+        if(user.role!="student"){
+            return res.status(403).json({
+                message:"Only students can cancel lunchbox!"
+            });
+        }
+
+        const now=new Date();
+        const hour=now.getHours();
+
+        if(hour>=9){
+            return res.status(400).json({
+                message:"Lunchbox cancellation is closed after 9:00 AM!"
+            });
+        }
+
+        const student=await Student.findOne({
+            userId:userId
+        });
+
+        if(!student){
+            return res.status(404).json({
+                message:"Student not found!"
+            });
+        }
+
+        const today=now.toISOString().split("T")[0];
+
+        const lunchBox=await LunchBox.findOne({
+            studentId:student._id,
+            date:today
+        });
+
+        if(!lunchBox){
+            return res.status(404).json({
+                message:"You have not booked today's lunchbox!"
+            });
+        }
+
+        await LunchBox.findByIdAndDelete(lunchBox._id);
+
+        res.status(200).json({
+            message:"Today's lunchbox booking cancelled successfully!"
+        });
+
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        });
+    }
+}
+//get my book lunchbox
+const getMyLunchBoxStatus=async(req,res)=>{
+    try{
+
+        const userId=req.result._id;
+
+        const user=await User.findById(userId);
+
+        if(!user){
+            return res.status(404).json({
+                message:"User not found!"
+            });
+        }
+
+        if(user.role!="student"){
+            return res.status(403).json({
+                message:"Only students can check lunchbox status!"
+            });
+        }
+
+        const student=await Student.findOne({
+            userId:userId
+        });
+
+        if(!student){
+            return res.status(404).json({
+                message:"Student not found!"
+            });
+        }
+
+        const today=new Intl.DateTimeFormat("en-CA",{
+            timeZone:"Asia/Kolkata",
+            year:"numeric",
+            month:"2-digit",
+            day:"2-digit"
+        }).format(new Date());
+
+        const lunchBox=await LunchBox.findOne({
+            studentId:student._id,
+            date:today
+        });
+
+        if(!lunchBox){
+            return res.status(200).json({
+                booked:false,
+                status:null,
+                message:"Lunchbox not booked for today!"
+            });
+        }
+
+        res.status(200).json({
+            booked:true,
+            status:lunchBox.status,
+            lunchBox
+        });
+
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        });
+    }
+}
+//Lunchbox mark collected by Worker
+const collectLunchBox=async(req,res)=>{
+    try{
+
+        const userId=req.result._id;
+        //check worker
+        const worker=await Worker.findOne({
+            userId:userId,
+            workerType:"lunchbox",
+            isActive:true
+        });
+
+        if(!worker){
+            return res.status(403).json({
+                message:"Only active lunchbox workers can collect lunchbox!"
+            });
+        }
+
+        const {lunchBoxId}=req.params;
+        const lunchBox=await LunchBox.findById(lunchBoxId);
+
+        if(!lunchBox){
+            return res.status(404).json({
+                message:"Lunchbox booking not found!"
+            });
+        }
+
+        if(lunchBox.status=="collected"){
+            return res.status(400).json({
+                message:"Lunchbox is already collected!"
+            });
+        }
+
+        lunchBox.status="collected";
+        lunchBox.collectedAt=new Date();
+
+        await lunchBox.save();
+
+        res.status(200).json({
+            message:"Lunchbox collected successfully!",
+            lunchBox
+        });
+
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        });
+    }
+}
+//get student who has booked lunch
+const getTodayLunchBoxes=async(req,res)=>{
+    try{
+
+        const userId=req.result._id;
+
+        //check worker
+        const worker=await Worker.findOne({
+            userId:userId,
+            workerType:"lunchbox",
+            isActive:true
+        });
+
+        if(!worker){
+            return res.status(403).json({
+                message:"Only active lunchbox workers can view lunchboxes!"
+            });
+        }
+
+        const now=new Date();
+
+        const today=new Intl.DateTimeFormat("en-CA",{
+            timeZone:"Asia/Kolkata",
+            year:"numeric",
+            month:"2-digit",
+            day:"2-digit"
+        }).format(now);
+
+        const lunchBoxes=await LunchBox.find({
+            date:today
+        })
+        .populate({
+            path:"studentId",
+            populate:{
+                path:"userId",
+                select:"username phoneNumber profilePic"
+            }
+        });
+
+        res.status(200).json({
+            message:"Today's lunchboxes fetched successfully!",
+            count:lunchBoxes.length,
+            lunchBoxes
+        });
+
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        });
+    }
+}
+//get lunch boxes using clg filter
+const getTodayLunchBoxesByCollege=async(req,res)=>{
+    try{
+
+        const userId=req.result._id;
+
+        //check worker
+        const worker=await Worker.findOne({
+            userId:userId,
+            workerType:"lunchbox",
+            isActive:true
+        });
+
+        if(!worker){
+            return res.status(403).json({
+                message:"Only active lunchbox workers can view lunchboxes!"
+            });
+        }
+
+        const {collegeName}=req.query;
+
+        if(!collegeName){
+            return res.status(400).json({
+                message:"College name is required!"
+            });
+        }
+
+        //normalize college name
+        const normalizedCollegeName=collegeName.trim().toLowerCase();
+
+        if(!normalizedCollegeName){
+            return res.status(400).json({
+                message:"College name is required!"
+            });
+        }
+
+        //get today's date according to India timezone
+        const today=new Intl.DateTimeFormat("en-CA",{
+            timeZone:"Asia/Kolkata",
+            year:"numeric",
+            month:"2-digit",
+            day:"2-digit"
+        }).format(new Date());
+
+        const lunchBoxes=await LunchBox.find({
+            date:today
+        })
+        .populate({
+            path:"studentId",
+            select:"userId roomNo course collegeName year",
+            match:{
+                collegeName:normalizedCollegeName
+            },
+            populate:{
+                path:"userId",
+                select:"username phoneNumber profilePic"
+            }
+        });
+
+        //remove students which did not match college
+        const filteredLunchBoxes=lunchBoxes.filter(
+            lunchBox=>lunchBox.studentId
+        );
+
+        res.status(200).json({
+            message:"Today's college lunchboxes fetched successfully!",
+            date:today,
+            collegeName:normalizedCollegeName,
+            total:filteredLunchBoxes.length,
+            lunchBoxes:filteredLunchBoxes
+        });
+
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        });
+    }
+}
+// No of student who has booked lunch
+const getTodayLunchBoxSummary=async(req,res)=>{
+    try{
+
+        const userId=req.result._id;
+
+        const worker=await Worker.findOne({
+            userId:userId,
+            workerType:"lunchbox",
+            isActive:true
+        });
+
+        if(!worker){
+            return res.status(403).json({
+                message:"Only active lunchbox workers can view summary!"
+            });
+        }
+
+        const today=new Intl.DateTimeFormat("en-CA",{
+            timeZone:"Asia/Kolkata",
+            year:"numeric",
+            month:"2-digit",
+            day:"2-digit"
+        }).format(new Date());
+
+        const totalBooked=await LunchBox.countDocuments({
+            date:today
+        });
+
+        const totalCollected=await LunchBox.countDocuments({
+            date:today,
+            status:"collected"
+        });
+
+        res.status(200).json({
+            date:today,
+            totalBooked,
+            totalCollected,
+            totalPending:totalBooked-totalCollected
+        });
+
+    }catch(err){
+        res.status(500).json({
+            message:err.message
+        });
+    }
+}
 module.exports={verifyOTP,resendOTP,studentDashboard,adminDashboard,
 registerAdmin,loginAdmin,registerStudent,loginStudent,
 logout,deleteStudent,allResidentStudents,getStudentByCollege,
@@ -4077,5 +4906,7 @@ deleteRoom,shiftStudentRoom,searchStudent ,applyLeave,
 returnToHostel,studentsOnLeave,createBus,updateBus,
 viewBus,deleteBus,submitKyc,getMyKyc,getPendingKyc,
 approveKyc,rejectKYC,getAdminContacts ,createAnnouncement,
-updateAnnouncement,getAnnouncements,deleteAnnouncement,getStudentPendingFees,updateStudentInstallmentByAdmin
+updateAnnouncement,getAnnouncements,deleteAnnouncement,getStudentPendingFees,updateStudentInstallmentByAdmin,
+registerWorkers,loginWorker,removeWorker,bookLunchBox,cancelLunchBox
+,getMyLunchBoxStatus,collectLunchBox,getTodayLunchBoxSummary,getTodayLunchBoxes,getTodayLunchBoxesByCollege
 }
