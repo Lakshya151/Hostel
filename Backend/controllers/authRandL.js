@@ -671,8 +671,8 @@ const registerStudent=async(req,res)=>{
                 message:"Student already register!"
             })
         }
-
-        let room=await Room.findOne({roomNo});
+        const normalizeRoom=roomNo.trim().toUpperCase();
+        let room=await Room.findOne({roomNo:normalizeRoom});
 
         if(!room){
             const {roomNo,floor,capacity,type,isAC}=req.body;
@@ -1507,7 +1507,7 @@ const updateMessMenu = async (req, res) => {
         const updatedMenu = await Mess.findOneAndUpdate(
             {day:normalizeDay,type:normalizeType},  
             req.body,   
-            { new: true ,runValidators:true} 
+            { returnDocument: "after" ,runValidators:true} 
         );
 
         if (!updatedMenu) {
@@ -2241,12 +2241,20 @@ const updateMyProfile = async (req, res) => {
         }
 
         if (email) {
-            if (!validator.isEmail(email)) {
-                return res.status(400).json({
-                    message:"Invalid email"
-                })
+            const normalizedEmail = email.trim().toLowerCase();
+
+            const existingUser = await User.findOne({
+                email: normalizedEmail,
+                _id: { $ne: req.result._id }
+            });
+
+            if (existingUser) {
+                return res.status(409).json({
+                    message: "Email is already being used by another user!"
+                });
             }
-            updateData.email =email.trim().toLowerCase();
+
+            user.email = normalizedEmail;
         }
 
         if (phoneNumber) {
@@ -2344,7 +2352,7 @@ const updateMyProfile = async (req, res) => {
                 userId,
                 updateData,
                 {
-                    new: true,
+                    returnDocument: "after", 
                     runValidators: true
                 }
             ).select("username email phoneNumber profilePic aadhar");
@@ -2366,9 +2374,32 @@ const updateMyProfile = async (req, res) => {
 //update Profile as admin
 const updateProfileByAdmin=async (req,res)=>{
     try{
-        const {id}=req.params;
-        const {username,email,phoneNumber,aadhar,address,
-            course,collegeName,year,guardianName,guardianPhone}=req.body;
+        const { id } = req.params;
+
+// id = Student ID
+const student = await Student.findById(id);
+
+if (!student) {
+    return res.status(404).json({
+        message: "Student not found!"
+    });
+}
+
+// Get User ID from Student
+const userId = student.userId;
+
+const {
+    username,
+    email,
+    phoneNumber,
+    aadhar,
+    address,
+    course,
+    collegeName,
+    year,
+    guardianName,
+    guardianPhone
+} = req.body;
 
         const updateUserData = {};
         const updateStudentData = {};
@@ -2386,7 +2417,7 @@ const updateProfileByAdmin=async (req,res)=>{
 
             const existingEmail = await User.findOne({
                 email: updateUserData.email,
-                _id: { $ne: id }
+                _id: { $ne: userId }
             });
 
             if (existingEmail) {
@@ -2399,7 +2430,7 @@ const updateProfileByAdmin=async (req,res)=>{
 
             const existingPhone = await User.findOne({
                 phoneNumber,
-                _id: { $ne: id }
+                _id: { $ne: userId }
             });
 
             if (existingPhone) {
@@ -2426,7 +2457,7 @@ const updateProfileByAdmin=async (req,res)=>{
             }
             const existingAadhar =await User.findOne({
                     aadhar,
-                    _id: { $ne: id }
+                    _id: { $ne: userId }
             });
             if (existingAadhar) {
                 return res.status(409).json({
@@ -2467,7 +2498,7 @@ const updateProfileByAdmin=async (req,res)=>{
             });
         }
 
-        const updatedUser=await User.findOneAndUpdate({_id:id},updateUserData,{new:true}).select(
+        const updatedUser=await User.findOneAndUpdate({_id:userId},updateUserData,{ returnDocument: "after" }).select(
             'username email phoneNumber aadhar'
         )
         if(!updatedUser){
@@ -2477,7 +2508,7 @@ const updateProfileByAdmin=async (req,res)=>{
         }
 
         const updatedStudent =await Student.findOneAndUpdate(
-                { userId: id },updateStudentData,{ new: true }
+                { userId: userId },updateStudentData,{ returnDocument: "after" }
             );
         if(!updatedStudent){
             return res.status(404).json({
@@ -3155,15 +3186,14 @@ const createRoom=async (req,res)=>{
                 message:"Room number and capacity is required!"
             })
         }
-
-        const alreadyExist=await Room.findOne({roomNo});
+        const normalizedRoomNo = roomNo.trim().toUpperCase();
+        const alreadyExist=await Room.findOne({roomNo:normalizedRoomNo});
         if(alreadyExist){
             return res.status(409).json({
                 message:"This room is already defined!"
             })
         }
-
-        const room=await Room.create({roomNo,floor,capacity,
+        const room=await Room.create({roomNo:normalizedRoomNo,floor,capacity,
             type,isAC,student:[]
         })
 
@@ -3356,6 +3386,7 @@ const shiftStudentRoom = async (req, res) => {
         }
 
         // old room
+        const normalizedRoomNo = newRoomNo.trim().toUpperCase();
         const oldRoom = await Room.findOne({roomNo: student.roomNo});
         if(!oldRoom){
             return res.status(404).json({
@@ -3363,7 +3394,7 @@ const shiftStudentRoom = async (req, res) => {
             });
         }
 
-        const newRoom = await Room.findOne({roomNo: newRoomNo});
+        const newRoom = await Room.findOne({roomNo: normalizedRoomNo});
 
         if (!newRoom) {
             return res.status(404).json({
@@ -3764,7 +3795,7 @@ const updateBus = async (req, res) => {
             }
         }
         const updatedBus = await Bus.findByIdAndUpdate(busId,updateData,
-                {new: true,runValidators: true}
+                { returnDocument: "after",runValidators: true}
             );
            
 

@@ -217,6 +217,163 @@ function Shell({ children }) {
     <>
       <style>{`
         /* =====================================================
+           GLOBAL BUTTON STYLING
+        ===================================================== */
+
+        .app button {
+          appearance: none;
+          -webkit-appearance: none;
+          border: 1px solid transparent;
+          border-radius: 10px;
+          padding: 9px 15px;
+          min-height: 40px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 7px;
+          font-family: inherit;
+          font-size: 13px;
+          font-weight: 700;
+          line-height: 1;
+          letter-spacing: .05px;
+          cursor: pointer;
+          transition: all .18s ease;
+          box-shadow: 0 1px 2px rgba(15,23,42,.06);
+        }
+
+        .app button:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 5px 14px rgba(15,23,42,.10);
+        }
+
+        .app button:active:not(:disabled) {
+          transform: translateY(0);
+          box-shadow: 0 2px 5px rgba(15,23,42,.08);
+        }
+
+        .app button:disabled {
+          opacity: .55;
+          cursor: not-allowed;
+          transform: none;
+          box-shadow: none;
+        }
+
+        .app button.primary {
+          background: #4f46e5;
+          color: #fff;
+          border-color: #4f46e5;
+        }
+
+        .app button.primary:hover:not(:disabled) {
+          background: #4338ca;
+          border-color: #4338ca;
+        }
+
+        .app button.secondary {
+          background: #fff;
+          color: #334155;
+          border-color: #d7dee8;
+        }
+
+        .app button.secondary:hover:not(:disabled) {
+          background: #f8fafc;
+          border-color: #b8c3d1;
+        }
+
+        .app button.danger {
+          background: #fff1f2;
+          color: #dc2626;
+          border-color: #fecdd3;
+        }
+
+        .app button.danger:hover:not(:disabled) {
+          background: #ffe4e6;
+          border-color: #fda4af;
+        }
+
+        .app button.icon {
+          width: 38px;
+          min-width: 38px;
+          height: 38px;
+          min-height: 38px;
+          padding: 0;
+          border-radius: 9px;
+        }
+
+        .app button.close {
+          width: 36px;
+          min-width: 36px;
+          height: 36px;
+          min-height: 36px;
+          padding: 0;
+          border: 0;
+          background: #f1f5f9;
+          color: #64748b;
+          border-radius: 9px;
+          box-shadow: none;
+        }
+
+        .app button.close:hover:not(:disabled) {
+          background: #e2e8f0;
+          color: #0f172a;
+        }
+
+        .app button.linkbtn {
+          min-height: auto;
+          padding: 5px 7px;
+          border: 0;
+          background: transparent;
+          color: #4f46e5;
+          box-shadow: none;
+        }
+
+        .app button.linkbtn:hover:not(:disabled) {
+          background: #eef2ff;
+          box-shadow: none;
+        }
+
+        /* Buttons used inside table action cells */
+        .app td.actions button {
+          min-height: 36px;
+          padding: 8px 12px;
+          border-radius: 9px;
+          font-size: 12px;
+        }
+
+        .app td.actions button.icon {
+          min-height: 36px;
+          width: 36px;
+          min-width: 36px;
+          padding: 0;
+        }
+
+        /* Fee-card Edit buttons and other plain action buttons */
+        .app .card button:not(.primary):not(.secondary):not(.danger):not(.icon):not(.close):not(.linkbtn),
+        .app .panel button:not(.primary):not(.secondary):not(.danger):not(.icon):not(.close):not(.linkbtn) {
+          background: #f8fafc;
+          color: #334155;
+          border-color: #d7dee8;
+        }
+
+        .app .card button:not(.primary):not(.secondary):not(.danger):not(.icon):not(.close):not(.linkbtn):hover:not(:disabled),
+        .app .panel button:not(.primary):not(.secondary):not(.danger):not(.icon):not(.close):not(.linkbtn):hover:not(:disabled) {
+          background: #f1f5f9;
+          border-color: #b8c3d1;
+        }
+
+        /* Keep navigation buttons visually distinct */
+        .app aside button,
+        .app .tabs button {
+          box-shadow: none;
+          transform: none;
+        }
+
+        .app aside button:hover,
+        .app .tabs button:hover {
+          transform: none;
+        }
+
+        /* =====================================================
            MOBILE RESPONSIVE TABLES + SIDEBAR
         ===================================================== */
 
@@ -2078,12 +2235,11 @@ function WorkerRegistration() {
               }}
             >
               <label style={labelStyle}>
-                Village <span style={{ color: "#ef4444" }}>*</span>
+                Village
                 <input
-                  required
                   value={form.address.village}
                   onChange={(e) => updateAddress("village", e.target.value)}
-                  placeholder="Enter village"
+                  placeholder="Enter village (optional)"
                   style={inputStyle}
                 />
               </label>
@@ -3847,6 +4003,7 @@ function StudentDetails() {
       role: "student",
       profilePic: "",
       aadhar: "",
+      roomNo: "",
       address: {
         village: "",
         city: "",
@@ -4004,6 +4161,8 @@ function StudentDetails() {
           ? ""
           : aadhar,
 
+      roomNo: data.roomNo || "",
+
       address: {
         village:
           address.village || "",
@@ -4115,6 +4274,19 @@ function StudentDetails() {
       setSaving(true);
       setError("");
 
+      const oldRoomNo = String(
+        data.roomNo || ""
+      )
+        .trim()
+        .toUpperCase();
+
+      const newRoomNo = String(
+        form.roomNo || ""
+      )
+        .trim()
+        .toUpperCase();
+
+      // Update normal profile information first.
       await adminApi.updateStudent(
         id,
         {
@@ -4151,6 +4323,21 @@ function StudentDetails() {
           },
         }
       );
+
+      // Change room only when the admin actually selected a
+      // different room. The backend shift API handles capacity,
+      // old-room removal, new-room assignment and student.roomNo.
+      if (
+        newRoomNo &&
+        newRoomNo !== oldRoomNo
+      ) {
+        await api.patch(
+          `/shiftStudentRoom/${id}`,
+          {
+            newRoomNo,
+          }
+        );
+      }
 
       setShowEdit(false);
 
@@ -4755,6 +4942,21 @@ function StudentDetails() {
                       e.target.value
                     )
                   }
+                />
+              </label>
+
+              <label>
+                Room Number *
+                <input
+                  required
+                  value={form.roomNo}
+                  onChange={(e) =>
+                    updateField(
+                      "roomNo",
+                      e.target.value.toUpperCase()
+                    )
+                  }
+                  placeholder="e.g. B515"
                 />
               </label>
             </div>
@@ -6199,35 +6401,285 @@ function LunchBoxBooking() {
 ========================================================= */
 
 function BusPage({ student = false }) {
-  const [data,setData]=useState(null); const [show,setShow]=useState(false); const [error,setError]=useState("");
-  const [form,setForm]=useState({busNo:"",route:"",hostelToCollege:"",collegeToHostel:""});
-  function load(){const request=student?studentApi.buses():adminApi.buses({page:1,limit:50});request.then(r=>setData(r.data)).catch(e=>setError(e.response?.data?.message||"No buses"));}
-  useEffect(()=>{load();},[student]);
-  async function create(e){e.preventDefault();try{await adminApi.createBus(form);setShow(false);load();}catch(e){setError(e.response?.data?.message||"Failed");}}
-  const rows=data?.busSchedule||data?.buses||[];
+  const [data, setData] = useState(null);
+  const [show, setShow] = useState(false);
+  const [editingBusId, setEditingBusId] = useState(null);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [form, setForm] = useState({
+    busNo: "",
+    route: "",
+    hostelToCollege: "",
+    collegeToHostel: "",
+  });
 
-  return <>
-    <style>{`
-      .bus-page{max-width:1180px;margin:0 auto;}
-      .bus-hero{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:28px;}
-      .bus-hero h1{margin:0;color:#10233f;font-size:clamp(34px,4vw,46px);letter-spacing:-1.4px;}.bus-hero p{margin:9px 0 0;color:#64748b;}
-      .bus-card{overflow:hidden;border:1px solid #e2e8f0;border-radius:20px;background:#fff;box-shadow:0 10px 28px rgba(15,23,42,.05);}
-      .bus-card-head{padding:22px 26px;border-bottom:1px solid #edf1f5;display:flex;align-items:center;gap:12px;}.bus-card-head h2{margin:0;color:#10233f;font-size:20px;}.bus-card-icon{width:40px;height:40px;display:grid;place-items:center;border-radius:12px;background:#eef0ff;color:#4f46e5;}
-      .bus-table{width:100%;overflow-x:auto;}.bus-table table{width:100%;min-width:650px;border-collapse:collapse;}.bus-table th{padding:14px 20px;text-align:left;color:#7183a0;font-size:11px;letter-spacing:.7px;text-transform:uppercase;border-bottom:1px solid #e8edf3;}.bus-table td{padding:19px 20px;color:#172b46;border-bottom:1px solid #edf1f5;}.bus-table tr:last-child td{border-bottom:0;}.bus-time{display:inline-flex;padding:7px 10px;border-radius:8px;background:#f4f6fa;font-weight:700;color:#52637c;}
-      @media(max-width:650px){.bus-hero{align-items:flex-start;flex-direction:column;}}
-    `}</style>
-    <div className="bus-page">
-      <div className="bus-hero"><div><h1>Bus Schedule</h1><p>Hostel to college and return timings.</p></div>{!student&&<button className="primary" onClick={()=>setShow(true)}><Plus size={17}/> Add Bus</button>}</div>
-      {error&&<ErrorBox>{error}</ErrorBox>}
-      <div className="bus-card">
-        <div className="bus-card-head"><div className="bus-card-icon"><Bus size={19}/></div><h2>Schedules</h2></div>
-        <div className="bus-table"><Table columns={[{key:"busNo",label:"Bus"},{key:"route",label:"Route"},{key:"hostelToCollege",label:"Hostel → College",render:(row)=><span className="bus-time">{row.hostelToCollege||"—"}</span>},{key:"collegeToHostel",label:"College → Hostel",render:(row)=><span className="bus-time">{row.collegeToHostel||"—"}</span>}]} rows={rows}/></div>
+  async function load() {
+    try {
+      setError("");
+      const request = student
+        ? studentApi.buses()
+        : adminApi.buses({ page: 1, limit: 50 });
+      const response = await request;
+      setData(response.data);
+    } catch (e) {
+      setError(e.response?.data?.message || "No buses");
+    }
+  }
+
+  useEffect(() => {
+    load();
+  }, [student]);
+
+  function openCreate() {
+    setEditingBusId(null);
+    setForm({
+      busNo: "",
+      route: "",
+      hostelToCollege: "",
+      collegeToHostel: "",
+    });
+    setError("");
+    setShow(true);
+  }
+
+  function openEdit(bus) {
+    setEditingBusId(bus._id);
+    setForm({
+      busNo: bus.busNo || "",
+      route: bus.route || "",
+      hostelToCollege: bus.hostelToCollege || "",
+      collegeToHostel: bus.collegeToHostel || "",
+    });
+    setError("");
+    setShow(true);
+  }
+
+  function closeModal() {
+    if (saving) return;
+    setShow(false);
+    setEditingBusId(null);
+  }
+
+  async function saveBus(e) {
+    e.preventDefault();
+
+    try {
+      setSaving(true);
+      setError("");
+
+      const payload = {
+        busNo: form.busNo.trim().toUpperCase(),
+        route: form.route.trim(),
+        hostelToCollege: form.hostelToCollege.trim(),
+        collegeToHostel: form.collegeToHostel.trim(),
+      };
+
+      if (editingBusId) {
+        await api.patch(`/updateBus/${editingBusId}`, payload);
+      } else {
+        await adminApi.createBus(payload);
+      }
+
+      setShow(false);
+      setEditingBusId(null);
+      await load();
+    } catch (e) {
+      setError(e.response?.data?.message || "Failed to save bus schedule");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteBus(bus) {
+    if (!bus?._id) {
+      setError("Bus id is missing");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete bus ${bus.busNo || "this bus"}?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setDeletingId(bus._id);
+      setError("");
+      await api.delete(`/deleteBus/${bus._id}`);
+      await load();
+    } catch (e) {
+      setError(e.response?.data?.message || "Failed to delete bus");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  const rows = data?.busSchedule || data?.buses || [];
+
+  const columns = [
+    { key: "busNo", label: "Bus" },
+    { key: "route", label: "Route" },
+    {
+      key: "hostelToCollege",
+      label: "Hostel → College",
+      render: (row) => (
+        <span className="bus-time">{row.hostelToCollege || "—"}</span>
+      ),
+    },
+    {
+      key: "collegeToHostel",
+      label: "College → Hostel",
+      render: (row) => (
+        <span className="bus-time">{row.collegeToHostel || "—"}</span>
+      ),
+    },
+  ];
+
+  if (!student) {
+    columns.push({
+      key: "actions",
+      label: "Actions",
+      render: (row) => (
+        <div className="bus-actions">
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => openEdit(row)}
+            disabled={deletingId === row._id}
+            title="Edit bus"
+          >
+            <Edit size={15} /> Edit
+          </button>
+          <button
+            type="button"
+            className="danger"
+            onClick={() => deleteBus(row)}
+            disabled={deletingId === row._id}
+            title="Delete bus"
+          >
+            <Trash2 size={15} />
+            {deletingId === row._id ? "Deleting..." : "Delete"}
+          </button>
+        </div>
+      ),
+    });
+  }
+
+  return (
+    <>
+      <style>{`
+        .bus-page{max-width:1180px;margin:0 auto;}
+        .bus-hero{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:28px;}
+        .bus-hero h1{margin:0;color:#10233f;font-size:clamp(34px,4vw,46px);letter-spacing:-1.4px;}
+        .bus-hero p{margin:9px 0 0;color:#64748b;}
+        .bus-card{overflow:hidden;border:1px solid #e2e8f0;border-radius:20px;background:#fff;box-shadow:0 10px 28px rgba(15,23,42,.05);}
+        .bus-card-head{padding:22px 26px;border-bottom:1px solid #edf1f5;display:flex;align-items:center;gap:12px;}
+        .bus-card-head h2{margin:0;color:#10233f;font-size:20px;}
+        .bus-card-icon{width:40px;height:40px;display:grid;place-items:center;border-radius:12px;background:#eef0ff;color:#4f46e5;}
+        .bus-table{width:100%;overflow-x:auto;}
+        .bus-table table{width:100%;min-width:850px;border-collapse:collapse;}
+        .bus-table th{padding:14px 20px;text-align:left;color:#7183a0;font-size:11px;letter-spacing:.7px;text-transform:uppercase;border-bottom:1px solid #e8edf3;}
+        .bus-table td{padding:19px 20px;color:#172b46;border-bottom:1px solid #edf1f5;}
+        .bus-table tr:last-child td{border-bottom:0;}
+        .bus-time{display:inline-flex;padding:7px 10px;border-radius:8px;background:#f4f6fa;font-weight:700;color:#52637c;}
+        .bus-actions{display:flex;gap:8px;align-items:center;}
+                @media(max-width:650px){.bus-hero{align-items:flex-start;flex-direction:column;}}
+      `}</style>
+
+      <div className="bus-page">
+        <div className="bus-hero">
+          <div>
+            <h1>Bus Schedule</h1>
+            <p>Hostel to college and return timings.</p>
+          </div>
+          {!student && (
+            <button className="primary" onClick={openCreate}>
+              <Plus size={17} /> Add Bus
+            </button>
+          )}
+        </div>
+
+        {error && <ErrorBox>{error}</ErrorBox>}
+
+        <div className="bus-card">
+          <div className="bus-card-head">
+            <div className="bus-card-icon"><Bus size={19} /></div>
+            <h2>Schedules</h2>
+          </div>
+          <div className="bus-table">
+            <Table columns={columns} rows={rows} />
+          </div>
+        </div>
+
+        {show && (
+          <Modal
+            title={editingBusId ? "Update Bus Schedule" : "Create Bus Schedule"}
+            close={closeModal}
+          >
+            <form onSubmit={saveBus}>
+              <label>
+                Bus Number
+                <input
+                  required
+                  value={form.busNo}
+                  onChange={(e) =>
+                    setForm({ ...form, busNo: e.target.value.toUpperCase() })
+                  }
+                  placeholder="e.g. BUS001"
+                />
+              </label>
+
+              <label>
+                Route
+                <input
+                  required
+                  value={form.route}
+                  onChange={(e) => setForm({ ...form, route: e.target.value })}
+                  placeholder="e.g. Hostel - ABC College"
+                />
+              </label>
+
+              <label>
+                Hostel To College
+                <input
+                  required
+                  value={form.hostelToCollege}
+                  onChange={(e) =>
+                    setForm({ ...form, hostelToCollege: e.target.value })
+                  }
+                  placeholder="e.g. 08:00 AM"
+                />
+              </label>
+
+              <label>
+                College To Hostel
+                <input
+                  required
+                  value={form.collegeToHostel}
+                  onChange={(e) =>
+                    setForm({ ...form, collegeToHostel: e.target.value })
+                  }
+                  placeholder="e.g. 04:00 PM"
+                />
+              </label>
+
+              <button className="primary full" disabled={saving}>
+                {saving
+                  ? editingBusId
+                    ? "Updating..."
+                    : "Creating..."
+                  : editingBusId
+                    ? "Update Schedule"
+                    : "Create Schedule"}
+              </button>
+            </form>
+          </Modal>
+        )}
       </div>
-      {show&&<Modal title="Create Bus Schedule" close={()=>setShow(false)}><form onSubmit={create}>{Object.keys(form).map(key=><label key={key}>{key.replace(/([A-Z])/g," $1")}<input required value={form[key]} onChange={(e)=>setForm({...form,[key]:e.target.value})}/></label>)}<button className="primary full">Create Schedule</button></form></Modal>}
-    </div>
-  </>;
+    </>
+  );
 }
-
 
 /* =========================================================
    ANNOUNCEMENTS
